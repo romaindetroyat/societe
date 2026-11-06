@@ -1,8 +1,10 @@
 // Pilotage NewCo — PWA sans framework
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const md = (s) => (s ? DOMPurify.sanitize(marked.parse(String(s))) : '');
+// typographie française : espace insécable avant ? ! : ; % € »
+const nb = (s) => String(s ?? '').replace(/ ([?!:;%€»])/g, '\u00a0$1').replace(/« /g, '«\u00a0');
+const esc = (s) => nb(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const md = (s) => (s ? DOMPurify.sanitize(marked.parse(nb(s))) : '');
 const today = () => new Date().toISOString().slice(0, 10);
 const addDays = (d, n) => new Date(new Date(d).getTime() + n * 864e5).toISOString().slice(0, 10);
 const fmtDate = (d, long) => d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', long ? { day: 'numeric', month: 'long', year: 'numeric' } : { day: '2-digit', month: 'short' }) : '';
@@ -199,7 +201,7 @@ const MCTX = document.createElement('canvas').getContext('2d');
 const FN_LABEL = "600 14px 'Space Grotesk'", FN_SUB = "500 10px 'JetBrains Mono'", FN_EDGE = "500 11px 'JetBrains Mono'";
 function tw(text, font, ls = 0) { MCTX.font = font; return MCTX.measureText(String(text)).width + ls * String(text).length; }
 function wrapText(text, font, max, ls = 0) {
-  const words = String(text || '').split(' '), lines = [];
+  const words = nb(text || '').split(' '), lines = [];
   let cur = '';
   for (const w of words) { const t = cur ? cur + ' ' + w : w; if (!cur || tw(t, font, ls) <= max) cur = t; else { lines.push(cur); cur = w; } }
   if (cur) lines.push(cur);
