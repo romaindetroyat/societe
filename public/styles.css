@@ -214,6 +214,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .st.s-block { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
 .st.s-done { background: var(--accent-soft); color: var(--accent-text); }
 .st.s-review { background: color-mix(in srgb, var(--amber) 18%, transparent); color: var(--amber-text); }
+.lock { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--bg-2); color: var(--text-2); font-size: .8rem; flex: none; }
 .prio-haute { color: var(--danger); }
 
 /* ------------------------------------------------------------ tabs, filters */

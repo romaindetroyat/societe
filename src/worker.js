@@ -15,7 +15,7 @@ export default {
         const key = p.startsWith('/mcp/') ? decodeURIComponent(p.slice(5)) : bearer(request);
         const user = await authKey(env, key);
         if (!user) return cors(json({ error: 'clé invalide' }, 401));
-        return cors(await handleMcp(request, env, user));
+        return cors(await handleMcp(request, { ...env, viewer: user }, user));
       }
       // Pas d'OAuth : on dit clairement qu'il n'y en a pas
       if (p.startsWith('/.well-known/oauth')) return new Response('Not found', { status: 404 });
@@ -26,12 +26,14 @@ export default {
       if (p.startsWith('/api/') || p.startsWith('/files/')) {
         const user = await authKey(env, readCookie(request, COOKIE) || bearer(request));
         if (!user) return json({ error: 'non authentifié' }, 401);
-        if (p.startsWith('/files/')) return serveFile(env, decodeURIComponent(p.slice(7)));
-        return api(request, env, user, url);
+        const venv = { ...env, viewer: user };
+        if (p.startsWith('/files/')) return serveFile(venv, decodeURIComponent(p.slice(7)));
+        return api(request, venv, user, url);
       }
       return env.ASSETS.fetch(request);
     } catch (e) {
-      return json({ error: e.message || String(e) }, 500);
+      const msg = e.message || String(e);
+      return json({ error: msg }, /introuvable/.test(msg) ? 404 : 500);
     }
   },
 };
@@ -142,6 +144,9 @@ async function uploadFile(request, ctx, id) {
   return db.updateItem(ctx, id, { file_key: key, file_name: f.name, file_type: f.type });
 }
 async function serveFile(env, key) {
+  const m = key.match(/^items\/(\d+)\//);
+  const it = m && (await env.DB.prepare('SELECT audience FROM items WHERE id=?').bind(+m[1]).first());
+  if (!it || !db.canSee(env, it)) return new Response('Introuvable', { status: 404 });
   const o = await env.FILES.get(key);
   if (!o) return new Response('Introuvable', { status: 404 });
   const h = new Headers();

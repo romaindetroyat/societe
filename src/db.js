@@ -9,11 +9,24 @@ export const KINDS = {
   topic: { label: 'Sujet en discussion', statuses: ['ouvert', 'en_cours', 'clos'], done: ['clos'] },
 };
 
-const FIELDS = ['kind', 'title', 'body', 'status', 'workstream', 'owner', 'priority', 'start_date', 'due_date',
+const FIELDS = ['audience', 'kind', 'title', 'body', 'status', 'workstream', 'owner', 'priority', 'start_date', 'due_date',
   'decision_date', 'effective_date', 'amount', 'budget_type', 'options', 'outcome', 'url', 'file_key', 'file_name', 'file_type'];
 const CONTACT_FIELDS = ['name', 'org', 'role', 'email', 'phone', 'address', 'notes', 'tags', 'user_id'];
 
 const all = async (stmt) => (await stmt.all()).results;
+
+// Visibilité : un élément avec « audience » n'est servi qu'aux personnes listées (et à l'administrateur)
+export function canSee(env, item) {
+  if (!item?.audience) return true;
+  const v = env.viewer;
+  if (!v) return false;
+  return !!v.is_admin || item.audience.split(',').map((x) => x.trim()).includes(v.id);
+}
+const visible = (env, list) => list.filter((i) => canSee(env, i));
+async function hiddenIds(env) {
+  const rows = await all(env.DB.prepare('SELECT id, audience FROM items WHERE audience IS NOT NULL'));
+  return new Set(rows.filter((r) => !canSee(env, r)).map((r) => r.id));
+}
 const today = () => new Date().toISOString().slice(0, 10);
 
 export async function log(ctx, action, itemId, summary) {
@@ -33,7 +46,9 @@ export async function bootstrap(env, user) {
   ]);
   return {
     me: { id: user.id, name: user.name, is_admin: !!user.is_admin },
-    users, workstreams, items, contacts, links, kinds: KINDS,
+    users, workstreams, contacts, kinds: KINDS,
+    items: visible(env, items),
+    links: (() => { const ok = new Set(visible(env, items).map((i) => i.id)); return links.filter((l) => ok.has(l.from_id) && ok.has(l.to_id)); })(),
     settings: Object.fromEntries(settings.map((s) => [s.key, safeJson(s.value)])),
   };
 }
@@ -53,18 +68,19 @@ export async function listItems(env, f = {}) {
   if (f.before) { where.push('coalesce(due_date, decision_date, effective_date) <= ?'); args.push(f.before); }
   const sql = `SELECT * FROM items ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     ORDER BY coalesce(due_date, decision_date, effective_date, '9999') , id LIMIT ${Math.min(+f.limit || 500, 1000)}`;
-  return all(env.DB.prepare(sql).bind(...args));
+  return visible(env, await all(env.DB.prepare(sql).bind(...args)));
 }
 
 export async function getItem(env, id) {
   const item = await env.DB.prepare('SELECT * FROM items WHERE id=?').bind(id).first();
-  if (!item) throw new Error(`élément ${id} introuvable`);
+  if (!item || !canSee(env, item)) throw new Error(`élément ${id} introuvable`);
   const [comments, linked] = await Promise.all([
     all(env.DB.prepare('SELECT * FROM comments WHERE item_id=? ORDER BY created_at').bind(id)),
     all(env.DB.prepare(`SELECT i.id, i.kind, i.title, i.status FROM links l JOIN items i
       ON i.id = CASE WHEN l.from_id=? THEN l.to_id ELSE l.from_id END WHERE l.from_id=? OR l.to_id=?`).bind(id, id, id)),
   ]);
-  return { ...item, comments, linked };
+  const h = await hiddenIds(env);
+  return { ...item, comments, linked: linked.filter((l) => !h.has(l.id)) };
 }
 
 function clean(data) {
@@ -89,7 +105,7 @@ export async function createItem(ctx, data) {
 
 export async function updateItem(ctx, id, data) {
   const before = await ctx.env.DB.prepare('SELECT * FROM items WHERE id=?').bind(id).first();
-  if (!before) throw new Error(`élément ${id} introuvable`);
+  if (!before || !canSee(ctx.env, before)) throw new Error(`élément ${id} introuvable`);
   const d = clean(data);
   delete d.kind;
   const keys = Object.keys(d);
@@ -107,8 +123,8 @@ export async function updateItem(ctx, id, data) {
 }
 
 export async function deleteItem(ctx, id) {
-  const it = await ctx.env.DB.prepare('SELECT title, file_key FROM items WHERE id=?').bind(id).first();
-  if (!it) throw new Error('introuvable');
+  const it = await ctx.env.DB.prepare('SELECT title, file_key, audience FROM items WHERE id=?').bind(id).first();
+  if (!it || !canSee(ctx.env, it)) throw new Error('introuvable');
   if (it.file_key && ctx.env.FILES) await ctx.env.FILES.delete(it.file_key);
   await ctx.env.DB.batch([
     ctx.env.DB.prepare('DELETE FROM comments WHERE item_id=?').bind(id),
@@ -120,6 +136,7 @@ export async function deleteItem(ctx, id) {
 }
 
 export async function setLinks(ctx, id, ids, silent) {
+  await getItem(ctx.env, id);
   const stmts = [ctx.env.DB.prepare('DELETE FROM links WHERE from_id=? OR to_id=?').bind(id, id)];
   for (const o of new Set(ids.map(Number).filter((x) => x && x !== id)))
     stmts.push(ctx.env.DB.prepare('INSERT OR IGNORE INTO links (from_id, to_id) VALUES (?,?)').bind(id, o));
@@ -130,6 +147,7 @@ export async function setLinks(ctx, id, ids, silent) {
 
 export async function addComment(ctx, id, body) {
   if (!body) throw new Error('commentaire vide');
+  await getItem(ctx.env, id);
   await ctx.env.DB.prepare('INSERT INTO comments (item_id, author, body) VALUES (?,?,?)').bind(id, ctx.user?.id, body).run();
   await ctx.env.DB.prepare("UPDATE items SET updated_at=datetime('now') WHERE id=?").bind(id).run();
   await log(ctx, 'commentaire', id, body.slice(0, 140));
@@ -180,11 +198,12 @@ export async function saveSetting(ctx, key, value) {
 }
 
 export async function listActivity(env, limit = 100) {
-  return all(env.DB.prepare('SELECT * FROM activity ORDER BY id DESC LIMIT ?').bind(Math.min(limit, 500)));
+  const h = await hiddenIds(env);
+  return (await all(env.DB.prepare('SELECT * FROM activity ORDER BY id DESC LIMIT ?').bind(Math.min(limit, 500)))).filter((a) => !h.has(a.item_id));
 }
 
 export async function overview(env) {
-  const items = await all(env.DB.prepare('SELECT * FROM items'));
+  const items = visible(env, await all(env.DB.prepare('SELECT * FROM items')));
   const t = today();
   const in30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
   const isOpen = (i) => !KINDS[i.kind].done.includes(i.status);
@@ -211,7 +230,7 @@ export async function overview(env) {
 
 export async function roadmapMarkdown(env, { from, to } = {}) {
   const [items, ws, users] = await Promise.all([
-    all(env.DB.prepare('SELECT * FROM items')),
+    all(env.DB.prepare('SELECT * FROM items')).then((l) => visible(env, l)),
     all(env.DB.prepare('SELECT * FROM workstreams ORDER BY sort')),
     all(env.DB.prepare('SELECT id,name FROM users')),
   ]);

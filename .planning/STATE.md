@@ -13,5 +13,8 @@
 - [x] TVT Innovation = cadre pour l'acculturation (pas de co-animation)
 - [x] Apport d'affaires = entre associés ; apporteurs extérieurs → contrats dédiés plus tard
 
+## Itération 3
+- [x] Visibilité par élément (`audience`), filtrée côté serveur (web, MCP, fichiers, journal) : chacun ne voit que le budget qui le concerne. Lignes Altapyx Méditerranée → Romain, Pierre, Edouard.
+
 ## Prochaine action
 Générer les clés des membres depuis « Équipe & accès », connecter Claude (MCP), puis fusion vers `main` quand validé.

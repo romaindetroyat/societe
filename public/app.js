@@ -68,11 +68,12 @@ function dateChip(d, done) {
   return `<span class="date-chip ${cls}">${esc(fmtDate(d))}</span>`;
 }
 const kindIcon = (k) => `<i class="ph ph-${KIND[k].icon}"></i>`;
+const lock = (i) => i.audience ? `<span class="lock" title="Visible uniquement par : ${esc(i.audience.split(',').map((u) => D.u[u.trim()]?.name || u).join(', '))}"><i class="ph ph-lock-simple"></i></span>` : '';
 function itemRow(i, opt = {}) {
   return `<div class="li" data-open="${i.id}">
     <span class="muted">${kindIcon(i.kind)}</span>
     <span class="t">${esc(i.title)}</span>
-    <span class="meta">${opt.noWs ? '' : `<span class="hide-sm">${wsTag(i.workstream)}</span>`}${st(i.status)}${dateChip(keyDate(i), isDone(i))}${av(i.owner)}</span>
+    <span class="meta">${lock(i)}${opt.noWs ? '' : `<span class="hide-sm">${wsTag(i.workstream)}</span>`}${st(i.status)}${dateChip(keyDate(i), isDone(i))}${av(i.owner)}</span>
   </div>`;
 }
 function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.append(t); setTimeout(() => t.remove(), 2600); }
@@ -521,7 +522,7 @@ VIEWS.taches = () => {
       const l = its.filter((i) => i.status === c).sort((a, b) => (a.due_date || '9').localeCompare(b.due_date || '9'));
       return `<div class="kcol ${(S.kcol || cols[0]) === c ? 'on' : ''}" data-col="${c}"><h3>${st(c)}<span class="label">${l.length}</span></h3>${l.map((i) => `<div class="kcard" draggable="true" data-drag="${i.id}" data-open="${i.id}">
         <div class="row" style="align-items:flex-start;flex-wrap:nowrap"><span class="ws-bar" style="background:${D.w[i.workstream]?.color || 'var(--border)'}"></span><div class="t" style="flex:1">${i.priority === 'haute' ? '<i class="ph ph-arrow-fat-up prio-haute"></i> ' : ''}${esc(i.title)}</div></div>
-        <div class="row between"><span class="small muted">${esc(D.w[i.workstream]?.title || '')}</span><span class="row" style="gap:6px">${i.n_comments ? `<span class="small muted"><i class="ph ph-chat-circle"></i>${i.n_comments}</span>` : ''}${dateChip(i.due_date, isDone(i))}${av(i.owner)}</span></div>
+        <div class="row between"><span class="small muted">${esc(D.w[i.workstream]?.title || '')}</span><span class="row" style="gap:6px">${lock(i)}${i.n_comments ? `<span class="small muted"><i class="ph ph-chat-circle"></i>${i.n_comments}</span>` : ''}${dateChip(i.due_date, isDone(i))}${av(i.owner)}</span></div>
       </div>`).join('')}</div>`;
     }).join('')}</div>`;
 };
@@ -579,7 +580,7 @@ VIEWS.documents = () => {
       <div class="row between"><span class="ico" style="width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:1.4rem;background:${D.w[i.workstream]?.color || 'var(--bg-2)'};color:${D.w[i.workstream]?.fg || 'var(--text)'}"><i class="ph ph-${fileIcon(i)}"></i></span>${st(i.status)}</div>
       <h3 style="margin:14px 0 6px">${esc(i.title)}</h3>
       <div class="small muted" style="min-height:2.6em">${esc((i.body || '').replace(/[#*_>`-]/g, '').slice(0, 100))}</div>
-      <div class="row" style="margin-top:10px">${i.file_key ? '<span class="tag accent"><i class="ph ph-paperclip"></i>Fichier</span>' : ''}${i.url ? '<span class="tag"><i class="ph ph-link"></i>Lien</span>' : ''}<span class="spacer"></span>${dateChip(i.due_date, isDone(i))}${av(i.owner)}</div>
+      <div class="row" style="margin-top:10px">${lock(i)}${i.file_key ? '<span class="tag accent"><i class="ph ph-paperclip"></i>Fichier</span>' : ''}${i.url ? '<span class="tag"><i class="ph ph-link"></i>Lien</span>' : ''}<span class="spacer"></span>${dateChip(i.due_date, isDone(i))}${av(i.owner)}</div>
     </div>`).join('') || '<div class="empty">Aucun document</div>'}</div>`;
 };
 function drivePreview(url) {
@@ -599,7 +600,7 @@ VIEWS.budget = () => {
   const byStatus = D.kinds.budget.statuses.map((s) => [s, l.filter((b) => b.status === s && (b.budget_type || 'charge') !== 'produit').reduce((a, b) => a + (b.amount || 0), 0)]);
   const tot = Math.max(1, byStatus.reduce((a, [, v]) => a + v, 0));
   const colS = { estime: '#A3A3A3', engage: 'var(--amber)', paye: 'var(--accent)' };
-  return `<div class="page-head"><div><div class="label">Enjeux budgétaires</div><h1 style="margin-top:10px">Budget</h1><p class="muted">Ordres de grandeur pour éclairer les choix : coûts de création, de fonctionnement, hypothèses de revenus. Montants HT, à affiner.</p></div>
+  return `<div class="page-head"><div><div class="label">Enjeux budgétaires</div><h1 style="margin-top:10px">Budget</h1><p class="muted">Ordres de grandeur pour éclairer les choix : coûts de création, de fonctionnement, hypothèses de revenus. Montants HT, à affiner. Chacun ne voit que les lignes qui le concernent.</p></div>
     <button class="btn primary" data-act="new" data-kind="budget"><i class="ph ph-plus"></i>Hypothèse</button></div>
     <div class="grid g4">${kpi('arrow-circle-down', eur(ch), 'charges', '#/budget')}${kpi('bank', eur(inv), 'investissements / apports', '#/budget')}${kpi('arrow-circle-up', eur(pr), 'produits attendus', '#/budget')}${kpi('scales', eur(pr - ch), 'solde produits − charges', '#/budget')}</div>
     <div class="grid g2 section">
@@ -608,7 +609,7 @@ VIEWS.budget = () => {
         <div class="row" style="margin-top:14px;gap:18px">${byStatus.map(([s, v]) => `<span class="small"><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${colS[s]}"></span> ${ST_LABEL[s]} <b>${eur(v)}</b></span>`).join('')}</div></div></div>
     </div>
     <div class="card section" style="overflow-x:auto"><table class="tbl"><thead><tr><th>Ligne</th><th class="hide-sm">Chantier</th><th>Nature</th><th>Statut</th><th class="hide-sm">Échéance</th><th class="num">Montant HT</th></tr></thead><tbody>
-      ${l.sort((a, b) => (b.amount || 0) - (a.amount || 0)).map((b) => `<tr data-open="${b.id}"><td style="color:var(--text);font-weight:500">${esc(b.title)}</td><td class="hide-sm">${wsTag(b.workstream)}</td><td><span class="tag">${esc(b.budget_type || 'charge')}</span></td><td>${st(b.status)}</td><td class="hide-sm">${dateChip(b.due_date, isDone(b))}</td><td class="num" style="color:${b.budget_type === 'produit' ? 'var(--accent-text)' : 'var(--text)'}">${eur(b.amount)}</td></tr>`).join('')}
+      ${l.sort((a, b) => (b.amount || 0) - (a.amount || 0)).map((b) => `<tr data-open="${b.id}"><td style="color:var(--text);font-weight:500">${esc(b.title)} ${lock(b)}</td><td class="hide-sm">${wsTag(b.workstream)}</td><td><span class="tag">${esc(b.budget_type || 'charge')}</span></td><td>${st(b.status)}</td><td class="hide-sm">${dateChip(b.due_date, isDone(b))}</td><td class="num" style="color:${b.budget_type === 'produit' ? 'var(--accent-text)' : 'var(--text)'}">${eur(b.amount)}</td></tr>`).join('')}
     </tbody></table></div>`;
 };
 
@@ -709,6 +710,8 @@ async function openItem(id, preset = {}) {
           ${dates.join('')}
         </div>
         ${others.join('')}
+        <div class="field"><span>Visible par <span class="muted" style="text-transform:none;letter-spacing:0">(aucune case = tout le monde)</span></span>
+          <div class="row" style="gap:6px">${D.users.map((u) => `<label class="chip ${(it.audience || '').split(',').includes(u.id) ? 'on' : ''}"><input type="checkbox" name="aud" value="${u.id}" ${(it.audience || '').split(',').includes(u.id) ? 'checked' : ''} hidden onchange="this.parentElement.classList.toggle('on', this.checked)">${av(u.id)}${esc(u.name.split(' ')[0])}</label>`).join('')}</div></div>
         ${f('body', 'Description (markdown)', `<textarea class="input" name="body" style="min-height:160px">${esc(it.body || '')}</textarea>`)}
       </div>
       <div class="col" style="gap:16px">
@@ -741,7 +744,10 @@ async function openItem(id, preset = {}) {
   $('#links', m).addEventListener('click', (e) => { const u = e.target.closest('[data-unlink]'); if (u) { links = links.filter((x) => x !== +u.dataset.unlink); u.parentElement.remove(); } });
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const body = Object.fromEntries(new FormData(form));
+    const fd = new FormData(form);
+    const body = Object.fromEntries(fd);
+    delete body.aud;
+    body.audience = fd.getAll('aud').join(',');
     body.link_ids = links;
     const saved = id ? await api(`/api/items/${id}`, { method: 'PUT', body }) : await api('/api/items', { method: 'POST', body: { ...body, kind: body.kind || k } });
     toast('Enregistré');

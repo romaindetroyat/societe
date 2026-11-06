@@ -19,6 +19,7 @@ const itemProps = {
   options: { type: 'string', description: 'Questions : pistes / options évoquées (markdown)' },
   outcome: { type: 'string', description: 'Questions : position commune, uniquement si actée par tous' },
   url: { type: 'string', description: 'Lien externe (Drive…)' },
+  audience: { type: 'string', description: 'Visibilité restreinte : identifiants séparés par des virgules (ex. « romain,pierre,edouard »). Vide = visible par tous.' },
   link_ids: { type: 'array', items: { type: 'integer' }, description: 'Identifiants des éléments liés (remplace les liens existants)' },
 };
 
@@ -107,7 +108,7 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: {} },
     run: async (env) => {
       const ws = (await env.DB.prepare('SELECT * FROM workstreams ORDER BY sort').all()).results;
-      const items = (await env.DB.prepare('SELECT workstream, kind, status FROM items').all()).results;
+      const items = (await env.DB.prepare('SELECT workstream, kind, status, audience FROM items').all()).results.filter((i) => db.canSee(env, i));
       return ws.map((w) => {
         const its = items.filter((i) => i.workstream === w.id);
         const done = its.filter((i) => db.KINDS[i.kind].done.includes(i.status)).length;
