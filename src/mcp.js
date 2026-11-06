@@ -8,7 +8,7 @@ const itemProps = {
   body: { type: 'string', description: 'Description en markdown' },
   status: { type: 'string', description: 'Statut ; voir la ressource des statuts par type dans « tableau_de_bord »' },
   workstream: { type: 'string', description: 'Identifiant du chantier (voir « chantiers »)' },
-  owner: { type: 'string', description: 'Identifiant du responsable (romain, kevin, arnaud, pierre, edouard…)' },
+  owner: { type: 'string', description: 'Identifiant du référent pressenti (romain, kevin, arnaud, pierre, edouard…)' },
   priority: { type: 'string', enum: ['haute', 'normale', 'basse'] },
   start_date: { type: 'string', description: 'YYYY-MM-DD' },
   due_date: { type: 'string', description: 'Échéance YYYY-MM-DD' },
@@ -16,8 +16,8 @@ const itemProps = {
   effective_date: { type: 'string', description: "Date d'application / d'effet YYYY-MM-DD" },
   amount: { type: 'number', description: 'Montant € HT (lignes budgétaires)' },
   budget_type: { type: 'string', enum: ['charge', 'produit', 'investissement'] },
-  options: { type: 'string', description: 'Décisions : options envisagées (markdown)' },
-  outcome: { type: 'string', description: 'Décisions : arbitrage retenu' },
+  options: { type: 'string', description: 'Questions : pistes / options évoquées (markdown)' },
+  outcome: { type: 'string', description: 'Questions : position commune, uniquement si actée par tous' },
   url: { type: 'string', description: 'Lien externe (Drive…)' },
   link_ids: { type: 'array', items: { type: 'integer' }, description: 'Identifiants des éléments liés (remplace les liens existants)' },
 };
@@ -25,7 +25,7 @@ const itemProps = {
 const TOOLS = [
   {
     name: 'tableau_de_bord',
-    description: "Vue d'ensemble du projet de création de société : compteurs par type et statut, budget, éléments en retard, échéances à 30 jours, décisions ouvertes, chantiers, équipe et statuts possibles.",
+    description: "Vue d'ensemble du projet de création de société : compteurs par type et statut, budget, éléments en retard, échéances à 30 jours, questions ouvertes, chantiers, équipe et statuts possibles.",
     inputSchema: { type: 'object', properties: {} },
     run: async (env) => {
       const [o, ws, users, s] = await Promise.all([
@@ -39,7 +39,7 @@ const TOOLS = [
   },
   {
     name: 'lister',
-    description: 'Lister / rechercher les éléments (tâches, décisions à trancher, documents, jalons, lignes budgétaires, sujets) avec filtres.',
+    description: 'Lister / rechercher les éléments (étapes = task, questions à trancher ensemble = decision, documents, jalons, hypothèses budgétaires, sujets) avec filtres.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -79,13 +79,13 @@ const TOOLS = [
   },
   {
     name: 'creer',
-    description: 'Créer un élément (tâche, décision à trancher, document, jalon, ligne budgétaire, sujet).',
+    description: 'Créer un élément (étape, question à trancher ensemble, document, jalon, hypothèse budgétaire, sujet). Formuler le titre comme une question ou une piste, jamais comme une décision imposée.',
     inputSchema: { type: 'object', properties: { kind: { type: 'string', enum: kindEnum }, ...itemProps }, required: ['kind', 'title'] },
     run: (env, a, user) => db.createItem({ env, user, via: 'mcp' }, a),
   },
   {
     name: 'modifier',
-    description: "Modifier un élément existant (statut, responsable, dates, arbitrage d'une décision, montant…). Seuls les champs fournis changent.",
+    description: "Modifier un élément existant (statut, référent pressenti, dates, position commune d'une question, montant…). Seuls les champs fournis changent. Ne renseigner « outcome » que pour une position réellement actée par tous.",
     inputSchema: { type: 'object', properties: { id: { type: 'integer' }, ...itemProps }, required: ['id'] },
     run: (env, { id, ...a }, user) => db.updateItem({ env, user, via: 'mcp' }, id, a),
   },
@@ -97,7 +97,7 @@ const TOOLS = [
   },
   {
     name: 'feuille_de_route',
-    description: 'Feuille de route à jour (markdown), par mois : décisions, échéances, dates d’application, avec chantier, responsable et statut.',
+    description: 'Feuille de route indicative à jour (markdown), par mois : dates de discussion, échéances envisagées, prises d’effet, avec chantier, référent pressenti et statut.',
     inputSchema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' } } },
     run: (env, a) => db.roadmapMarkdown(env, a),
   },
@@ -162,7 +162,7 @@ async function rpc(m, env, user, origin) {
         protocolVersion: m.params?.protocolVersion || PROTOCOL,
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: 'pilotage-societe', version: '1.0.0' },
-        instructions: `Outil de pilotage de la création de la nouvelle société (ex-projet Take Off). Utilisateur connecté : ${user.name} (${user.id}). Commencer par « tableau_de_bord » pour le contexte, les identifiants des chantiers et de l'équipe. Les modifications sont journalisées au nom de l'utilisateur.`,
+        instructions: `Outil de pilotage de la création de la nouvelle société (ex-projet Take Off). Utilisateur connecté : ${user.name} (${user.id}). Commencer par « tableau_de_bord » pour le contexte, les identifiants des chantiers et de l'équipe. C'est un outil de présentation et de suivi partagé entre futurs associés et partenaires : rien n'est acté sans l'accord de tous. Formuler les éléments comme des questions ou des pistes, avec un ton ouvert, jamais comme des décisions prises à la place des autres. Les modifications sont journalisées au nom de l'utilisateur.`,
       });
     case 'ping':
       return ok({});

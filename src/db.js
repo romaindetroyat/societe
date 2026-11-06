@@ -1,12 +1,12 @@
 // Accès aux données (D1) partagé par l'API web et le serveur MCP
 
 export const KINDS = {
-  task: { label: 'Tâche', statuses: ['a_faire', 'en_cours', 'bloque', 'fait'], done: ['fait'] },
-  decision: { label: 'Décision à trancher', statuses: ['ouverte', 'en_discussion', 'tranchee'], done: ['tranchee'] },
+  task: { label: 'Étape', statuses: ['a_faire', 'en_cours', 'bloque', 'fait'], done: ['fait'] },
+  decision: { label: 'Question à trancher ensemble', statuses: ['ouverte', 'en_discussion', 'tranchee'], done: ['tranchee'] },
   document: { label: 'Document', statuses: ['a_produire', 'brouillon', 'en_revue', 'valide', 'signe'], done: ['valide', 'signe'] },
-  event: { label: 'Jalon / événement', statuses: ['prevu', 'fait', 'annule'], done: ['fait', 'annule'] },
-  budget: { label: 'Ligne budgétaire', statuses: ['estime', 'engage', 'paye'], done: ['paye'] },
-  topic: { label: 'Sujet en cours', statuses: ['ouvert', 'en_cours', 'clos'], done: ['clos'] },
+  event: { label: 'Jalon envisagé', statuses: ['prevu', 'fait', 'annule'], done: ['fait', 'annule'] },
+  budget: { label: 'Hypothèse budgétaire', statuses: ['estime', 'engage', 'paye'], done: ['paye'] },
+  topic: { label: 'Sujet en discussion', statuses: ['ouvert', 'en_cours', 'clos'], done: ['clos'] },
 };
 
 const FIELDS = ['kind', 'title', 'body', 'status', 'workstream', 'owner', 'priority', 'start_date', 'due_date',
@@ -205,7 +205,7 @@ export async function overview(env) {
     budget_total_ht: budget,
     en_retard: items.filter((i) => isOpen(i) && keyDate(i) && keyDate(i) < t).map(slim),
     a_venir_30j: items.filter((i) => isOpen(i) && keyDate(i) >= t && keyDate(i) <= in30).sort((a, b) => keyDate(a).localeCompare(keyDate(b))).map(slim),
-    decisions_ouvertes: items.filter((i) => i.kind === 'decision' && isOpen(i)).map(slim),
+    questions_ouvertes: items.filter((i) => i.kind === 'decision' && isOpen(i)).map(slim),
   };
 }
 
@@ -219,7 +219,7 @@ export async function roadmapMarkdown(env, { from, to } = {}) {
   const wname = Object.fromEntries(ws.map((w) => [w.id, w.title]));
   const rows = [];
   for (const i of items) {
-    for (const [field, lab] of [['decision_date', 'Décision'], ['due_date', 'Échéance'], ['effective_date', 'Application']]) {
+    for (const [field, lab] of [['decision_date', 'À discuter'], ['due_date', 'Échéance envisagée'], ['effective_date', 'Prise d’effet']]) {
       const d = i[field];
       if (!d || (from && d < from) || (to && d > to)) continue;
       rows.push({ d, lab, i });
@@ -228,10 +228,10 @@ export async function roadmapMarkdown(env, { from, to } = {}) {
   rows.sort((a, b) => a.d.localeCompare(b.d));
   const months = {};
   for (const r of rows) (months[r.d.slice(0, 7)] ??= []).push(r);
-  let md = `# Feuille de route — générée le ${today()}\n`;
+  let md = `# Feuille de route indicative — générée le ${today()}\n\n_Calendrier de travail : chaque date est une hypothèse à ajuster ensemble._\n`;
   for (const [m, rs] of Object.entries(months)) {
     const label = new Date(m + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-    md += `\n## ${label}\n\n| Date | Type | Élément | Chantier | Responsable | Statut |\n|---|---|---|---|---|---|\n`;
+    md += `\n## ${label}\n\n| Date | Type | Élément | Chantier | Référent pressenti | Statut |\n|---|---|---|---|---|---|\n`;
     for (const { d, lab, i } of rs)
       md += `| ${d} | ${lab} | #${i.id} ${i.title} | ${wname[i.workstream] || '—'} | ${uname[i.owner] || '—'} | ${i.status || ''} |\n`;
   }
