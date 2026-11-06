@@ -16,5 +16,8 @@
 ## Itération 3
 - [x] Visibilité par élément (`audience`), filtrée côté serveur (web, MCP, fichiers, journal) : chacun ne voit que le budget qui le concerne. Lignes Altapyx Méditerranée → Romain, Pierre, Edouard.
 
+## Itération 4
+- [x] Partie budgétaire retirée (démarrage a minima, peu de frais et pas d'avocat par défaut) ; questions reformulées en ce sens
+
 ## Prochaine action
 Générer les clés des membres depuis « Équipe & accès », connecter Claude (MCP), puis fusion vers `main` quand validé.

@@ -1,6 +1,6 @@
 # Pilotage NewCo
 
-Tableau de bord de création et de pilotage de société : chantiers, décisions à trancher, documents, budget, feuille de route, tâches, contacts. PWA + serveur MCP pour Claude. Hébergé sur Cloudflare (Worker + D1 + R2), sans framework ni build.
+Tableau de bord de création et de pilotage de société : chantiers, questions ouvertes, documents, feuille de route, étapes, contacts. PWA + serveur MCP pour Claude. Hébergé sur Cloudflare (Worker + D1 + R2), sans framework ni build.
 
 > Les données ne sont pas dans ce dépôt (public) : elles sont dans D1/R2, derrière authentification par clé personnelle.
 

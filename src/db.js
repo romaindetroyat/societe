@@ -5,7 +5,6 @@ export const KINDS = {
   decision: { label: 'Question à trancher ensemble', statuses: ['ouverte', 'en_discussion', 'tranchee'], done: ['tranchee'] },
   document: { label: 'Document', statuses: ['a_produire', 'brouillon', 'en_revue', 'valide', 'signe'], done: ['valide', 'signe'] },
   event: { label: 'Jalon envisagé', statuses: ['prevu', 'fait', 'annule'], done: ['fait', 'annule'] },
-  budget: { label: 'Hypothèse budgétaire', statuses: ['estime', 'engage', 'paye'], done: ['paye'] },
   topic: { label: 'Sujet en discussion', statuses: ['ouvert', 'en_cours', 'clos'], done: ['clos'] },
 };
 
@@ -206,7 +205,7 @@ export async function overview(env) {
   const items = visible(env, await all(env.DB.prepare('SELECT * FROM items')));
   const t = today();
   const in30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
-  const isOpen = (i) => !KINDS[i.kind].done.includes(i.status);
+  const isOpen = (i) => !(KINDS[i.kind]?.done || []).includes(i.status);
   const keyDate = (i) => i.due_date || i.decision_date || i.effective_date;
   const byKind = {};
   for (const i of items) {
@@ -215,13 +214,10 @@ export async function overview(env) {
     if (isOpen(i)) byKind[i.kind].ouverts++;
     byKind[i.kind].par_statut[i.status] = (byKind[i.kind].par_statut[i.status] || 0) + 1;
   }
-  const budget = { charge: 0, produit: 0, investissement: 0 };
-  for (const i of items.filter((i) => i.kind === 'budget')) budget[i.budget_type || 'charge'] += i.amount || 0;
   const slim = (i) => ({ id: i.id, kind: i.kind, title: i.title, status: i.status, owner: i.owner, workstream: i.workstream, date: keyDate(i) });
   return {
     date_du_jour: t,
     compteurs: byKind,
-    budget_total_ht: budget,
     en_retard: items.filter((i) => isOpen(i) && keyDate(i) && keyDate(i) < t).map(slim),
     a_venir_30j: items.filter((i) => isOpen(i) && keyDate(i) >= t && keyDate(i) <= in30).sort((a, b) => keyDate(a).localeCompare(keyDate(b))).map(slim),
     questions_ouvertes: items.filter((i) => i.kind === 'decision' && isOpen(i)).map(slim),

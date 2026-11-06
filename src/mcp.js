@@ -14,8 +14,6 @@ const itemProps = {
   due_date: { type: 'string', description: 'Échéance YYYY-MM-DD' },
   decision_date: { type: 'string', description: 'Date de décision YYYY-MM-DD' },
   effective_date: { type: 'string', description: "Date d'application / d'effet YYYY-MM-DD" },
-  amount: { type: 'number', description: 'Montant € HT (lignes budgétaires)' },
-  budget_type: { type: 'string', enum: ['charge', 'produit', 'investissement'] },
   options: { type: 'string', description: 'Questions : pistes / options évoquées (markdown)' },
   outcome: { type: 'string', description: 'Questions : position commune, uniquement si actée par tous' },
   url: { type: 'string', description: 'Lien externe (Drive…)' },
@@ -26,7 +24,7 @@ const itemProps = {
 const TOOLS = [
   {
     name: 'tableau_de_bord',
-    description: "Vue d'ensemble du projet de création de société : compteurs par type et statut, budget, éléments en retard, échéances à 30 jours, questions ouvertes, chantiers, équipe et statuts possibles.",
+    description: "Vue d'ensemble du projet de création de société : compteurs par type et statut, éléments en retard, échéances à 30 jours, questions ouvertes, chantiers, équipe et statuts possibles.",
     inputSchema: { type: 'object', properties: {} },
     run: async (env) => {
       const [o, ws, users, s] = await Promise.all([
@@ -40,7 +38,7 @@ const TOOLS = [
   },
   {
     name: 'lister',
-    description: 'Lister / rechercher les éléments (étapes = task, questions à trancher ensemble = decision, documents, jalons, hypothèses budgétaires, sujets) avec filtres.',
+    description: 'Lister / rechercher les éléments (étapes = task, questions à trancher ensemble = decision, documents, jalons, sujets) avec filtres.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -80,13 +78,13 @@ const TOOLS = [
   },
   {
     name: 'creer',
-    description: 'Créer un élément (étape, question à trancher ensemble, document, jalon, hypothèse budgétaire, sujet). Formuler le titre comme une question ou une piste, jamais comme une décision imposée.',
+    description: 'Créer un élément (étape, question à trancher ensemble, document, jalon, sujet). Formuler le titre comme une question ou une piste, jamais comme une décision imposée.',
     inputSchema: { type: 'object', properties: { kind: { type: 'string', enum: kindEnum }, ...itemProps }, required: ['kind', 'title'] },
     run: (env, a, user) => db.createItem({ env, user, via: 'mcp' }, a),
   },
   {
     name: 'modifier',
-    description: "Modifier un élément existant (statut, référent pressenti, dates, position commune d'une question, montant…). Seuls les champs fournis changent. Ne renseigner « outcome » que pour une position réellement actée par tous.",
+    description: "Modifier un élément existant (statut, référent pressenti, dates, position commune d'une question, échéances…). Seuls les champs fournis changent. Ne renseigner « outcome » que pour une position réellement actée par tous.",
     inputSchema: { type: 'object', properties: { id: { type: 'integer' }, ...itemProps }, required: ['id'] },
     run: (env, { id, ...a }, user) => db.updateItem({ env, user, via: 'mcp' }, id, a),
   },

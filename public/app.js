@@ -18,7 +18,6 @@ const KIND = {
   decision: { icon: 'question', label: 'Question à trancher ensemble', plural: 'Questions' },
   document: { icon: 'file-text', label: 'Document', plural: 'Documents' },
   event: { icon: 'flag-banner', label: 'Jalon envisagé', plural: 'Jalons' },
-  budget: { icon: 'coins', label: 'Hypothèse budgétaire', plural: 'Budget' },
   topic: { icon: 'chats-circle', label: 'Sujet en discussion', plural: 'Sujets' },
 };
 const EXTRA = {
@@ -26,7 +25,6 @@ const EXTRA = {
   decision: ['decision_date', 'effective_date', 'options', 'outcome'],
   document: ['due_date', 'url'],
   event: ['start_date', 'due_date', 'effective_date'],
-  budget: ['amount', 'budget_type', 'due_date', 'effective_date'],
   topic: ['due_date', 'decision_date'],
 };
 const F_LABEL = { start_date: 'Début envisagé', due_date: 'Échéance envisagée', decision_date: 'À discuter d’ici le', effective_date: 'Prise d’effet envisagée', amount: 'Montant € HT (estimation)', budget_type: 'Nature', options: 'Pistes / options (markdown)', outcome: 'Position commune, si actée', url: 'Lien (Drive, Docs…)' };
@@ -87,7 +85,6 @@ const NAV = [
   ['decisions', 'question', 'Questions ouvertes'],
   ['taches', 'kanban', 'Étapes'],
   ['documents', 'files', 'Documents'],
-  ['budget', 'coins', 'Budget'],
   ['contacts', 'address-book', 'Contacts'],
   null,
   ['activite', 'clock-counter-clockwise', 'Activité'],
@@ -125,8 +122,6 @@ const VIEWS = {};
 
 VIEWS.accueil = () => {
   const open = (k) => items({ kind: k, open: true });
-  const budget = items({ kind: 'budget' });
-  const charges = budget.filter((b) => (b.budget_type || 'charge') !== 'produit').reduce((s, b) => s + (b.amount || 0), 0);
   const upcoming = D.items.filter((i) => !isDone(i) && keyDate(i)).sort((a, b) => keyDate(a).localeCompare(keyDate(b))).slice(0, 10);
   const decisions = open('decision').sort((a, b) => (a.decision_date || '9').localeCompare(b.decision_date || '9'));
   const mine = items({ owner: D.me.id, open: true }).filter((i) => i.kind === 'task').slice(0, 8);
@@ -146,7 +141,7 @@ VIEWS.accueil = () => {
     ${kpi('question', decisions.length, 'questions ouvertes', '#/decisions')}
     ${kpi('check-square', open('task').length, 'étapes à instruire', '#/taches')}
     ${kpi('files', open('document').length, 'documents à préparer', '#/documents')}
-    ${kpi('coins', eur(charges), 'charges estimées HT', '#/budget')}
+    ${kpi('flag-banner', open('event').length, 'jalons envisagés', '#/feuille-de-route')}
   </div>
   <div class="grid g2 section">
     <div class="card"><div class="section-head"><h2>Prochaines échéances envisagées</h2><a href="#/feuille-de-route" class="label">Feuille de route →</a></div>
@@ -590,29 +585,6 @@ function drivePreview(url) {
   return kind === 'file' ? `https://drive.google.com/file/d/${m[1]}/preview` : `https://docs.google.com/${kind}/d/${m[1]}/preview`;
 }
 
-// ------------------------------------------------------------------ budget
-VIEWS.budget = () => {
-  const l = items({ kind: 'budget' });
-  const sum = (t) => l.filter((b) => (b.budget_type || 'charge') === t).reduce((s, b) => s + (b.amount || 0), 0);
-  const ch = sum('charge'), pr = sum('produit'), inv = sum('investissement');
-  const byWs = D.workstreams.map((w) => [w, l.filter((b) => b.workstream === w.id && (b.budget_type || 'charge') !== 'produit').reduce((s, b) => s + (b.amount || 0), 0)]).filter(([, v]) => v).sort((a, b) => b[1] - a[1]);
-  const max = Math.max(1, ...byWs.map(([, v]) => v));
-  const byStatus = D.kinds.budget.statuses.map((s) => [s, l.filter((b) => b.status === s && (b.budget_type || 'charge') !== 'produit').reduce((a, b) => a + (b.amount || 0), 0)]);
-  const tot = Math.max(1, byStatus.reduce((a, [, v]) => a + v, 0));
-  const colS = { estime: '#A3A3A3', engage: 'var(--amber)', paye: 'var(--accent)' };
-  return `<div class="page-head"><div><div class="label">Enjeux budgétaires</div><h1 style="margin-top:10px">Budget</h1><p class="muted">Ordres de grandeur pour éclairer les choix : coûts de création, de fonctionnement, hypothèses de revenus. Montants HT, à affiner. Chacun ne voit que les lignes qui le concernent.</p></div>
-    <button class="btn primary" data-act="new" data-kind="budget"><i class="ph ph-plus"></i>Hypothèse</button></div>
-    <div class="grid g4">${kpi('arrow-circle-down', eur(ch), 'charges', '#/budget')}${kpi('bank', eur(inv), 'investissements / apports', '#/budget')}${kpi('arrow-circle-up', eur(pr), 'produits attendus', '#/budget')}${kpi('scales', eur(pr - ch), 'solde produits − charges', '#/budget')}</div>
-    <div class="grid g2 section">
-      <div class="card"><h3 style="margin-bottom:16px">Charges & investissements par chantier</h3><div class="bars">${byWs.map(([w, v]) => `<div class="bar-row"><span>${esc(w.title)}</span><span class="track"><i style="width:${(100 * v) / max}%;background:${D.w[w.id].color}"></i></span><span class="num">${eur(v)}</span></div>`).join('') || '<div class="muted">—</div>'}</div></div>
-      <div class="card"><h3 style="margin-bottom:16px">Avancement des dépenses</h3><div class="bars"><div class="track" style="height:26px;border-radius:13px">${byStatus.map(([s, v]) => `<i style="width:${(100 * v) / tot}%;background:${colS[s]}" title="${ST_LABEL[s]} ${eur(v)}"></i>`).join('')}</div>
-        <div class="row" style="margin-top:14px;gap:18px">${byStatus.map(([s, v]) => `<span class="small"><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${colS[s]}"></span> ${ST_LABEL[s]} <b>${eur(v)}</b></span>`).join('')}</div></div></div>
-    </div>
-    <div class="card section" style="overflow-x:auto"><table class="tbl"><thead><tr><th>Ligne</th><th class="hide-sm">Chantier</th><th>Nature</th><th>Statut</th><th class="hide-sm">Échéance</th><th class="num">Montant HT</th></tr></thead><tbody>
-      ${l.sort((a, b) => (b.amount || 0) - (a.amount || 0)).map((b) => `<tr data-open="${b.id}"><td style="color:var(--text);font-weight:500">${esc(b.title)} ${lock(b)}</td><td class="hide-sm">${wsTag(b.workstream)}</td><td><span class="tag">${esc(b.budget_type || 'charge')}</span></td><td>${st(b.status)}</td><td class="hide-sm">${dateChip(b.due_date, isDone(b))}</td><td class="num" style="color:${b.budget_type === 'produit' ? 'var(--accent-text)' : 'var(--text)'}">${eur(b.amount)}</td></tr>`).join('')}
-    </tbody></table></div>`;
-};
-
 // ------------------------------------------------------------------ contacts
 VIEWS.contacts = () => {
   const q = (S.filters.cq || '').toLowerCase();
@@ -650,7 +622,7 @@ VIEWS.claude = () => {
       <div class="card"><h3>Claude.ai (web, desktop, mobile)</h3><ol class="small" style="padding-left:18px;line-height:1.9"><li>Paramètres → <b>Connecteurs</b> → <b>Ajouter un connecteur personnalisé</b></li><li>Nom : <code>Pilotage</code> — URL : votre adresse MCP</li><li>Laissez les champs OAuth vides, validez</li><li>Activez le connecteur dans une conversation</li></ol>
         <h3 style="margin-top:18px">Claude Code</h3><code class="code">claude mcp add --transport http pilotage ${esc(url || '<adresse MCP>')}</code></div>
     </div>
-    <div class="card section"><h3>Outils disponibles</h3><div class="grid auto small" style="margin-top:14px">${[['tableau_de_bord', 'Vue d’ensemble, retards, échéances, questions ouvertes'], ['lister', 'Recherche filtrée des éléments'], ['detail', 'Détail, commentaires, liens'], ['lire_document', 'Contenu d’un document'], ['creer / modifier', 'Créer ou mettre à jour une question, une étape, un document, un jalon, une hypothèse budgétaire'], ['commenter', 'Ajouter un commentaire'], ['feuille_de_route', 'Feuille de route markdown à jour'], ['chantiers', 'Avancement par chantier'], ['contacts / enregistrer_contact', 'Annuaire partagé'], ['activite', 'Journal des modifications']].map(([n, d]) => `<div><code>${n}</code><div class="muted" style="margin-top:4px">${d}</div></div>`).join('')}</div></div>`;
+    <div class="card section"><h3>Outils disponibles</h3><div class="grid auto small" style="margin-top:14px">${[['tableau_de_bord', 'Vue d’ensemble, retards, échéances, questions ouvertes'], ['lister', 'Recherche filtrée des éléments'], ['detail', 'Détail, commentaires, liens'], ['lire_document', 'Contenu d’un document'], ['creer / modifier', 'Créer ou mettre à jour une question, une étape, un document, un jalon'], ['commenter', 'Ajouter un commentaire'], ['feuille_de_route', 'Feuille de route markdown à jour'], ['chantiers', 'Avancement par chantier'], ['contacts / enregistrer_contact', 'Annuaire partagé'], ['activite', 'Journal des modifications']].map(([n, d]) => `<div><code>${n}</code><div class="muted" style="margin-top:4px">${d}</div></div>`).join('')}</div></div>`;
 };
 
 // ------------------------------------------------------------------ équipe & accès (admin)
@@ -681,7 +653,6 @@ async function openItem(id, preset = {}) {
   const extra = EXTRA[k].map((n) => {
     const label = k === 'event' && n === 'due_date' ? 'Date' : F_LABEL[n];
     if (n === 'options' || n === 'outcome') return f(n, label, `<textarea class="input" name="${n}" placeholder="Markdown">${esc(it[n] || '')}</textarea>`);
-    if (n === 'budget_type') return f(n, label, `<select class="input" name="${n}">${['charge', 'investissement', 'produit'].map((t) => `<option ${it[n] === t ? 'selected' : ''}>${t}</option>`).join('')}</select>`);
     if (n === 'amount') return f(n, label, inp(n, 'number'));
     if (n === 'url') return f(n, label, inp(n, 'url'));
     return f(n, label, inp(n, 'date'));
