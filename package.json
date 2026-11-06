@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler d1 migrations apply societe-pilotage --remote && wrangler deploy"
+    "deploy": "wrangler d1 migrations apply societe-pilotage --remote && wrangler deploy",
+    "deploy:embed": "node scripts/embed-static.mjs && wrangler deploy -c wrangler.embed.jsonc"
   },
   "devDependencies": { "wrangler": "^4.40.0" }
 }

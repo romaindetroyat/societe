@@ -1,0 +1,9 @@
+// Variante de déploiement sans assets (fichiers embarqués) : node scripts/embed-static.mjs && wrangler deploy -c wrangler.embed.jsonc
+{
+  "name": "societe",
+  "main": "src/worker-embed.js",
+  "compatibility_date": "2026-10-01",
+  "d1_databases": [{ "binding": "DB", "database_name": "societe-pilotage", "database_id": "d9df3913-1e75-4311-888e-6f6d85f0b283" }],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "societe-documents" }],
+  "observability": { "enabled": true }
+}

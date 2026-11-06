@@ -9,6 +9,11 @@ Tableau de bord de création et de pilotage de société : chantiers, décisions
 2. Migrations D1 : `npx wrangler d1 migrations apply societe-pilotage --remote` (déjà appliquées en production).
 3. Optionnel : `npx wrangler secret put ADMIN_KEY` (clé administrateur de secours).
 
+Déploiement direct sans upload d'assets (fichiers embarqués dans le Worker, utilisé depuis Claude Code) :
+```bash
+node scripts/embed-static.mjs && npx wrangler deploy -c wrangler.embed.jsonc
+```
+
 Alternative : workflow GitHub « Déploiement Cloudflare (manuel) » avec les secrets `CLOUDFLARE_API_TOKEN` et `CLOUDFLARE_ACCOUNT_ID`.
 
 ## Développement local

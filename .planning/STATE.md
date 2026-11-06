@@ -3,7 +3,7 @@
 - **Phase** : 2 — mise en service (itération « clarté » faite)
 - **Base D1** `societe-pilotage` : contenu reformulé en questions ouvertes (référents pressentis, dates indicatives)
 - **R2** `societe-documents` : créé
-- **Worker** `societe` : en ligne sur https://societe.romaindetroyat.workers.dev (Workers Builds, déploiement auto sur la branche)
+- **Worker** `societe` : en ligne sur https://societe.romaindetroyat.workers.dev — déployé depuis Claude Code (`npm run deploy:embed`), Workers Builds ne redéployant pas la branche
 
 ## Itération 2 — retours de Romain
 - [x] Formulation en questions, pas en affirmations (contenu + libellés + consignes MCP)
