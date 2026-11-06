@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pilotage-societe",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/mcp", "/mcp/*", "/files/*", "/.well-known/*"]
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "societe-pilotage", "database_id": "d9df3913-1e75-4311-888e-6f6d85f0b283", "migrations_dir": "migrations" }
+  ],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "societe-documents" }],
+  "observability": { "enabled": true }
+  // Secret optionnel : ADMIN_KEY (clé de secours administrateur)
+}
