@@ -25,5 +25,9 @@
 - [x] Nouveau chantier « TVT Innovation, associé » (3 questions, 1 sujet, 1 jalon, 1 étape, créés via le MCP)
 - [x] Schéma : ancrages répartis par côté de cadre, apport d'affaires affiché comme pastille de zone
 
+## Itération 6 — pacte
+- [x] Majorité des 3/4 enregistrée comme proposition de Romain (question « gouvernance »)
+- [x] Document « Pacte d'associés » : liste de travail exhaustive (15 thèmes, ~90 questions) issue de 18 modèles et guides publiés, liée aux questions concernées
+
 ## Prochaine action
 Générer les clés des membres depuis « Équipe & accès », connecter Claude (MCP), puis fusion vers `main` quand validé.
