@@ -265,8 +265,9 @@ function layoutStructure(sch, W) {
   const maxText = mobile ? 140 : 200, icon = 46, gapX = mobile ? 12 : 30, gapY = mobile ? 78 : 96, margin = mobile ? 12 : 36, zonePad = 16, zoneTop = 34;
   const nodes = sch.nodes.map((n) => {
     const lab = wrapText(n.label, FN_LABEL, maxText), sub = n.sub ? wrapText(n.sub, FN_SUB, maxText, 0.6) : [];
-    const textW = Math.max(...lab.map((l) => tw(l, FN_LABEL)), ...sub.map((l) => tw(l, FN_SUB, 0.6)));
-    return { ...n, layer: n.layer ?? 0, lab, subL: sub, w: Math.ceil(icon + textW + 18), h: Math.max(58, 22 + lab.length * 18 + sub.length * 14) };
+    const partsW = (n.parts || []).reduce((s2, [a, b]) => s2 + tw(`${a} ${b}`, FN_SUB, 0.6) + 22, 0) + Math.max(0, (n.parts || []).length - 1) * 6;
+    const textW = Math.max(...lab.map((l) => tw(l, FN_LABEL)), ...sub.map((l) => tw(l, FN_SUB, 0.6)), partsW);
+    return { ...n, layer: n.layer ?? 0, lab, subL: sub, w: Math.ceil(icon + textW + 18), h: Math.max(58, 22 + lab.length * 18 + sub.length * 14 + (n.parts?.length ? 30 : 0)) };
   });
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
   // écart élargi entre deux voisins reliés latéralement (place pour l'étiquette)
@@ -387,7 +388,7 @@ function structureDiagram() {
   const nodes = L.nodes.map((n) => {
     const [fill, txt, stroke, icBg, icFg] = ST[n.kind] || ST.company;
     const x = n.x - n.w / 2, y = n.y - n.h / 2;
-    const th = n.lab.length * 18 + n.subL.length * 14;
+    const th = n.lab.length * 18 + n.subL.length * 14 + (n.parts?.length ? 30 : 0);
     let ty = n.y - th / 2 + 13;
     const t1 = n.lab.map((l) => { const s = `<text x="${x + 50}" y="${ty}" style="font:${FN_LABEL};fill:${txt}">${esc(l)}</text>`; ty += 18; return s; }).join('');
     ty -= 2;
@@ -395,7 +396,7 @@ function structureDiagram() {
     return `<g class="dg-node" data-node="${esc(n.id)}">${n.kind === 'newco' ? `<rect class="pulse-r" x="${x - 6}" y="${y - 6}" width="${n.w + 12}" height="${n.h + 12}" rx="22" fill="none" stroke="var(--accent)" stroke-width="2"/>` : ''}
       <rect x="${x}" y="${y}" width="${n.w}" height="${n.h}" rx="${n.kind === 'person' ? Math.min(28, n.h / 2) : 16}" fill="${fill}" stroke="${stroke}" stroke-width="1.5" ${n.kind === 'partner' ? 'stroke-dasharray="5 4"' : ''}/>
       <foreignObject x="${x + 10}" y="${n.y - 16}" width="32" height="32"><div xmlns="http://www.w3.org/1999/xhtml" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:${icBg};color:${icFg};font-size:17px"><i class="ph ph-${esc(n.icon || (n.kind === 'person' ? 'user' : 'buildings'))}"></i></div></foreignObject>
-      ${t1}${t2}</g>`;
+      ${t1}${t2}${(() => { if (!n.parts?.length) return ''; let px = x + 50; const py = ty - 6; return n.parts.map(([a, b]) => { const w = tw(`${a} ${b}`, FN_SUB, 0.6) + 22; const g = `<rect x="${px}" y="${py}" width="${w}" height="22" rx="11" fill="var(--bg-2)" stroke="var(--border-strong)"/><text x="${px + 11}" y="${py + 15}" style="font:${FN_SUB};letter-spacing:.06em;fill:var(--text)"><tspan style="font-weight:600">${esc(a)}</tspan> ${esc(b)}</text>`; px += w + 6; return g; }).join(''); })()}</g>`;
   }).join('');
   return `<div class="diagram-wrap ${mobile ? 'mobile' : ''}" id="dg"><div class="bg-grid"></div>
     ${mobile ? '' : `<div class="dg-tools"><button class="btn icon sm" data-zoom="1.2" title="Dézoomer"><i class="ph ph-minus"></i></button><button class="btn icon sm" data-zoom="0.83" title="Zoomer"><i class="ph ph-plus"></i></button><button class="btn icon sm" data-zoom="0" title="Recentrer"><i class="ph ph-arrows-in"></i></button></div>`}
@@ -413,6 +414,7 @@ function structureList(sch) {
   const card = (n) => `<div class="sl-card ${n.kind}" data-slnode="${esc(n.id)}">
       <div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span class="sl-ico"><i class="ph ph-${esc(n.icon || 'circle')}"></i></span>
       <div style="min-width:0"><div class="sl-t">${esc(n.label)}</div>${n.sub ? `<div class="sl-s">${esc(n.sub)}</div>` : ''}</div></div>
+      ${n.parts?.length ? `<div class="sl-rel">${n.parts.map(([a, b]) => `<span class="sl-chip"><b>${esc(a)}</b> ${esc(b)}</span>`).join('')}</div>` : ''}
       ${n.desc ? `<div class="md small sl-d">${md(n.desc)}</div>` : ''}
       ${rel(n).length ? `<div class="sl-rel">${rel(n).map((e) => { const out = e.from === n.id; return `<span class="sl-chip"><i class="sw" style="background:${EDGE_COLOR[e.type]}"></i>${out ? '→' : '←'} ${esc(name(out ? e.to : e.from))}${e.label ? ` · <b>${esc(e.label)}</b>` : ''}</span>`; }).join('')}</div>` : ''}
     </div>`;
