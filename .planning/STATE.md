@@ -19,5 +19,11 @@
 ## Itération 4
 - [x] Partie budgétaire retirée (démarrage a minima, peu de frais et pas d'avocat par défaut) ; questions reformulées en ce sens
 
+## Itération 5 — quatre associés
+- [x] TVT Innovation associé envisagé à 25 % (ouvreur de portes, donneur d'ordres, gage de crédibilité ; activité rémunératrice en retour)
+- [x] Kevin et Arnaud via leurs sociétés ; Altapyx Méditerranée à 25 %
+- [x] Nouveau chantier « TVT Innovation, associé » (3 questions, 1 sujet, 1 jalon, 1 étape, créés via le MCP)
+- [x] Schéma : ancrages répartis par côté de cadre, apport d'affaires affiché comme pastille de zone
+
 ## Prochaine action
 Générer les clés des membres depuis « Équipe & accès », connecter Claude (MCP), puis fusion vers `main` quand validé.

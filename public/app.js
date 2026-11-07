@@ -263,24 +263,25 @@ function routeEdges(sch, L) {
     const mode = isZ ? 'zone' : Math.abs(a.y - b.y) < 8 ? 'side' : b.y > a.y ? 'down' : 'up';
     return { ...e, idx, a, b, mode };
   }).filter(Boolean);
-  const spread = (key, node, other, prop) => {
-    const groups = {};
-    for (const e of edges.filter((e) => e.mode === 'down' || e.mode === 'up')) (groups[key(e)] ??= []).push(e);
-    for (const g of Object.values(groups)) {
-      g.sort((p, q) => other(p).x - other(q).x);
-      g.forEach((e, i) => { const n = node(e); const span = Math.min(n.w * 0.56, 46 * (g.length - 1)); e[prop] = n.x + (g.length > 1 ? (i / (g.length - 1) - 0.5) * span : 0); });
-    }
-  };
-  spread((e) => e.from + e.mode, (e) => e.a, (e) => e.b, 'sx');
-  spread((e) => e.to + e.mode, (e) => e.b, (e) => e.a, 'tx');
+  // points d'ancrage répartis par côté de cadre (haut / bas), entrées et sorties confondues
+  const ends = {};
+  for (const e of edges.filter((e) => e.mode === 'down' || e.mode === 'up')) {
+    (ends[e.from + (e.mode === 'down' ? ':b' : ':t')] ??= []).push({ e, n: e.a, o: e.b, prop: 'sx' });
+    (ends[e.to + (e.mode === 'down' ? ':t' : ':b')] ??= []).push({ e, n: e.b, o: e.a, prop: 'tx' });
+  }
+  for (const g of Object.values(ends)) {
+    g.sort((p, q) => p.o.x - q.o.x);
+    g.forEach((p, i) => { const span = Math.min(p.n.w * 0.6, 46 * (g.length - 1)); p.e[p.prop] = p.n.x + (g.length > 1 ? (i / (g.length - 1) - 0.5) * span : 0); });
+  }
   for (const e of edges) {
     const { a, b } = e;
     if (e.mode === 'down') { e.p = [e.sx, a.y + a.h / 2, e.tx, b.y - b.h / 2]; const d = (e.p[3] - e.p[1]) / 2; e.c = [e.p[0], e.p[1] + d, e.p[2], e.p[3] - d]; }
     else if (e.mode === 'up') { e.p = [e.sx, a.y - a.h / 2, e.tx, b.y + b.h / 2]; const d = (e.p[1] - e.p[3]) / 2; e.c = [e.p[0], e.p[1] - d, e.p[2], e.p[3] + d]; }
     else if (e.mode === 'side') { const r = b.x > a.x ? 1 : -1; e.p = [a.x + r * a.w / 2, a.y, b.x - r * b.w / 2, b.y]; e.c = [e.p[0], e.p[1], e.p[2], e.p[3]]; }
     else { // vers une zone : boucle par le côté droit si la place existe, sinon arrive par le bas de la zone
-      const z = b.zone, outX = z.x + z.w + 60;
-      if (outX < L.W - 8) { const ty = z.y + z.h * 0.6; e.p = [a.x + a.w / 2 - 14, a.y - a.h / 2, z.x + z.w, ty]; e.c = [e.p[0] + 30, e.p[1] - 70, outX, ty]; e.side = true; }
+      const z = b.zone, outL = z.x - 60, outR = z.x + z.w + 60;
+      if (outL > 8) { const ty = z.y + z.h * 0.6; e.p = [a.x - a.w / 2 + 14, a.y - a.h / 2, z.x, ty]; e.c = [e.p[0] - 30, e.p[1] - 70, outL, ty]; e.side = true; }
+      else if (outR < L.W - 8) { const ty = z.y + z.h * 0.6; e.p = [a.x + a.w / 2 - 14, a.y - a.h / 2, z.x + z.w, ty]; e.c = [e.p[0] + 30, e.p[1] - 70, outR, ty]; e.side = true; }
       else { e.p = [a.x + a.w / 2 - 18, a.y - a.h / 2, Math.min(z.x + z.w - 36, a.x + a.w / 2 + 120), z.y + z.h]; const d = (e.p[1] - e.p[3]) / 2; e.c = [e.p[0], e.p[1] - d, e.p[2], e.p[3] + d]; }
     }
   }
@@ -303,8 +304,15 @@ function routeEdges(sch, L) {
   for (const z of L.zones) {
     const lw = tw(z.label.toUpperCase(), FN_EDGE, 1.5) + 12;
     const cand = [{ x: z.x + 18, anchor: 'start', r: [z.x + 12, z.y + 4, z.x + 18 + lw, z.y + 30] }, { x: z.x + z.w - 18, anchor: 'end', r: [z.x + z.w - 18 - lw, z.y + 4, z.x + z.w - 12, z.y + 30] }];
-    const cost = (r) => edges.reduce((n, e) => { for (let t = 0; t <= 1; t += 0.05) { const [x, y] = bez(e, t); if (x > r[0] && x < r[2] && y > r[1] && y < r[3]) n++; } return n; }, 0) + boxes.filter((q) => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]).length * 5;
+    const cost = (r) => edges.reduce((n, e) => { for (let t = 0; t <= 1; t += 0.01) { const [x, y] = bez(e, t); if (x > r[0] - 8 && x < r[2] + 8 && y > r[1] - 6 && y < r[3] + 6) n++; } return n; }, 0) + boxes.filter((q) => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]).length * 5;
     z.lab = cand.sort((p, q) => cost(p.r) - cost(q.r))[0];
+    if (z.note) { // pastille posée sur le bord haut ou bas du cadre, là où rien ne passe
+      const nw = tw(z.note, FN_EDGE) + 30, opts = [];
+      for (const yy of [z.y + z.h, z.y]) for (let x = z.x + 16; x + nw <= z.x + z.w - 16; x += 12) opts.push([x, yy - 11, x + nw, yy + 11]);
+      const lr = z.lab.r;
+      const c2 = (r) => cost(r) * 3 + ((r[0] < lr[2] && r[2] > lr[0] && r[1] < lr[3] && r[3] > lr[1]) ? 50 : 0);
+      z.noteBox = opts.sort((p, q) => c2(p) - c2(q) || p[0] - q[0])[0] || [z.x + 16, z.y + z.h - 11, z.x + 16 + nw, z.y + z.h + 11];
+    }
   }
   return edges;
 }
@@ -317,7 +325,7 @@ function structureDiagram() {
   const W = avail >= 900 ? 1200 : Math.round(avail);
   const L = layoutStructure(sch, W), E = routeEdges(sch, L), mobile = W < 700;
   const markers = Object.entries(EDGE_COLOR).map(([k, c]) => `<marker id="arr-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${c}"/></marker>`).join('');
-  const zones = L.zones.map((z) => `<g><rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="22" fill="var(--zone)" stroke="var(--border-strong)" stroke-dasharray="4 6"/><text x="${z.lab?.x ?? z.x + 18}" y="${z.y + 22}" text-anchor="${z.lab?.anchor || 'start'}" class="dg-label" style="text-transform:uppercase;letter-spacing:.14em;fill:var(--muted)">${esc(z.label)}</text></g>`).join('');
+  const zones = L.zones.map((z) => `<g><rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="22" fill="var(--zone)" stroke="var(--border-strong)" stroke-dasharray="4 6"/><text x="${z.lab?.x ?? z.x + 18}" y="${z.y + 22}" text-anchor="${z.lab?.anchor || 'start'}" class="dg-label" style="text-transform:uppercase;letter-spacing:.14em;fill:var(--muted)">${esc(z.label)}</text>${z.noteBox ? `<g><rect x="${z.noteBox[0]}" y="${z.noteBox[1]}" width="${z.noteBox[2] - z.noteBox[0]}" height="22" rx="11" fill="var(--card)" stroke="${EDGE_COLOR[z.noteType] || 'var(--amber)'}"/><text x="${z.noteBox[0] + 12}" y="${z.noteBox[1] + 15}" class="dg-label" style="fill:var(--text-2)">↻ ${esc(z.note)}</text></g>` : ''}</g>`).join('');
   const edges = E.map((e) => `<g data-edge="${e.idx}" data-from="${esc(e.from)}" data-to="${esc(e.to)}"><path class="dg-edge ${e.type !== 'capital' ? 'flow' : ''}" d="M${e.p[0]},${e.p[1]} C${e.c[0]},${e.c[1]} ${e.c[2]},${e.c[3]} ${e.p[2]},${e.p[3]}" style="stroke:${EDGE_COLOR[e.type] || 'var(--border-strong)'}" marker-end="url(#arr-${e.type})"/></g>`).join('');
   const labels = E.filter((e) => e.lb).map((e) => `<g class="dg-lab" data-edge-label="${e.idx}"><rect class="dg-label-bg" x="${e.lb.x - e.lb.w / 2}" y="${e.lb.y - e.lb.h / 2}" width="${e.lb.w}" height="${e.lb.h}" rx="11" style="stroke:${EDGE_COLOR[e.type]}"/><text class="dg-label" x="${e.lb.x}" y="${e.lb.y + 4}" text-anchor="middle">${esc(e.label)}</text></g>`).join('');
   const ST = { newco: ['#0A0A0A', '#FAFAFA', 'var(--accent)', 'var(--accent)', '#0A0A0A'], company: ['var(--card)', 'var(--text)', 'var(--border-strong)', 'var(--bg-2)', 'var(--text-2)'], person: ['var(--card)', 'var(--text)', 'var(--border-strong)', 'var(--bg-2)', 'var(--text-2)'], offer: ['var(--accent-soft)', 'var(--text)', 'var(--accent-line)', 'var(--accent)', '#0A0A0A'], partner: ['var(--bg-2)', 'var(--text)', 'var(--border-strong)', 'var(--card)', 'var(--text-2)'], client: ['var(--card)', 'var(--text)', 'var(--border-strong)', 'var(--bg-2)', 'var(--text-2)'] };
@@ -354,7 +362,7 @@ function structureList(sch) {
       ${rel(n).length ? `<div class="sl-rel">${rel(n).map((e) => { const out = e.from === n.id; return `<span class="sl-chip"><i class="sw" style="background:${EDGE_COLOR[e.type]}"></i>${out ? '→' : '←'} ${esc(name(out ? e.to : e.from))}${e.label ? ` · <b>${esc(e.label)}</b>` : ''}</span>`; }).join('')}</div>` : ''}
     </div>`;
   const titles = sch.layerLabels || [];
-  return `<div class="sl">${layers.map((L, i) => `${i ? '<div class="sl-arrow"><i class="ph ph-arrow-down"></i></div>' : ''}<section class="sl-sec"><div class="label" style="margin-bottom:10px">${esc(titles[L] || zoneOf({ layer: L })?.label || '')}</div><div class="col">${sch.nodes.filter((n) => (n.layer ?? 0) === L).map(card).join('')}</div></section>`).join('')}
+  return `<div class="sl">${layers.map((L, i) => `${i ? '<div class="sl-arrow"><i class="ph ph-arrow-down"></i></div>' : ''}<section class="sl-sec"><div class="label" style="margin-bottom:10px">${esc(titles[L] || zoneOf({ layer: L })?.label || '')}</div>${zoneOf({ layer: L })?.note ? `<div class="sl-chip" style="margin-bottom:10px"><i class="sw" style="background:${EDGE_COLOR[zoneOf({ layer: L }).noteType] || 'var(--amber)'}"></i>↻ ${esc(zoneOf({ layer: L }).note)}</div>` : ''}<div class="col">${sch.nodes.filter((n) => (n.layer ?? 0) === L).map(card).join('')}</div></section>`).join('')}
     <div class="legend" style="border:0;padding:16px 0 0">${EDGE_LEGEND.map(([k, l]) => `<span><i class="sw" style="background:${EDGE_COLOR[k]}"></i>${l}</span>`).join('')}<span class="muted">« ? » = hypothèse à discuter</span></div></div>`;
 }
 function nodePanel(id) {
