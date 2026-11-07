@@ -697,14 +697,6 @@ VIEWS.equipe = async () => {
   return `<div class="page-head"><div><div class="label">Administration</div><h1 style="margin-top:10px">Équipe & accès</h1><p class="muted">Générez une clé personnelle pour chaque membre : elle donne accès à l’outil web et au MCP. Générer une nouvelle clé révoque l’ancienne.</p></div>
     <button class="btn" data-act="new-user"><i class="ph ph-user-plus"></i>Ajouter un membre</button></div>
     <div class="card"><div class="list">${users.map((u) => `<div class="li" style="cursor:default">${av(u.id)}<span class="t">${esc(u.name)} <span class="muted small">· ${esc(u.org || '')} ${u.role ? '· ' + esc(u.role) : ''}</span></span><span class="meta">${u.has_key ? '<span class="tag accent">clé active</span>' : '<span class="tag">pas de clé</span>'}${u.is_admin ? '<span class="tag">admin</span>' : ''}<button class="btn sm" data-genkey="${u.id}"><i class="ph ph-key"></i>${u.has_key ? 'Régénérer' : 'Générer'} la clé</button></span></div>`).join('')}</div></div>
-    <div class="grid g2 section">
-      <div class="card"><h3>Projet</h3><p class="small muted">Nom, description, phase (affichés dans le cockpit).</p>
-        <textarea class="input" id="set-projet" style="min-height:220px;font-family:var(--font-mono);font-size:.8rem">${esc(JSON.stringify(D.settings.projet || {}, null, 2))}</textarea>
-        <button class="btn primary" style="margin-top:10px" data-save-setting="projet">Enregistrer</button></div>
-      <div class="card"><h3>Schéma de structure</h3><p class="small muted">Nœuds (id, label, sub, kind : newco|company|person|partner|offer|client, x, y, icon, desc, workstreams) et liens (from, to, label, type : capital|flow|money|service|partner).</p>
-        <textarea class="input" id="set-structure" style="min-height:220px;font-family:var(--font-mono);font-size:.75rem">${esc(JSON.stringify(D.settings.structure || { nodes: [], edges: [] }, null, 1))}</textarea>
-        <button class="btn primary" style="margin-top:10px" data-save-setting="structure">Enregistrer</button></div>
-    </div>
     <div class="card section"><div class="section-head"><h3>Chantiers</h3><button class="btn sm" data-act="edit-ws"><i class="ph ph-plus"></i>Chantier</button></div><div class="list">${D.workstreams.map((w) => `<div class="li" data-act="edit-ws" data-id="${w.id}"><i class="ph ph-${esc(w.icon || 'circle')}" style="color:${D.w[w.id].color}"></i><span class="t">${esc(w.title)}</span><span class="meta">${av(w.lead)}<span class="label">${esc(w.id)}</span></span></div>`).join('')}</div></div>`;
 };
 
