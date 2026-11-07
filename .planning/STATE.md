@@ -38,5 +38,11 @@
 - [x] Sortie du consortium Take Off retirée (actée) ; convention du consortium conservée comme document à fournir, pour inspiration
 - [x] Code passé sur `main`
 
+## Itération 9 — accélération
+- [x] Calendrier resserré : accord 13 nov · Altapyx Méditerranée immatriculée 20 nov (en parallèle des règles du jeu) · signature 25 nov · Kbis 2 déc · démarrage 7 déc
+- [x] Constitution via Legalstart : document coûts/pièces/ordre + étapes par associé (Kbis, pièces TVT, président, bénéficiaires effectifs)
+- [x] Rôles : Arnaud CMO, Kevin CTO, Romain COO ; référents des chantiers réalignés
+- [x] Journal d'activité remis à zéro (demande de Romain)
+
 ## Prochaine action
 Générer les clés des membres depuis « Équipe & accès », connecter Claude (MCP), puis fusion vers `main` quand validé.
