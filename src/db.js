@@ -198,7 +198,8 @@ export async function saveSetting(ctx, key, value) {
 
 export async function listActivity(env, limit = 100) {
   const h = await hiddenIds(env);
-  return (await all(env.DB.prepare('SELECT * FROM activity ORDER BY id DESC LIMIT ?').bind(Math.min(limit, 500)))).filter((a) => !h.has(a.item_id));
+  // les connexions ne sont visibles que par l'administrateur
+  return (await all(env.DB.prepare('SELECT * FROM activity ORDER BY id DESC LIMIT ?').bind(Math.min(limit, 500)))).filter((a) => !h.has(a.item_id) && (a.action !== 'connexion' || env.viewer?.is_admin));
 }
 
 export async function overview(env) {

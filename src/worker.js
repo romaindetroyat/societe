@@ -5,7 +5,7 @@ import * as db from './db.js';
 const COOKIE = 'sk';
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const p = url.pathname;
     try {
@@ -15,6 +15,7 @@ export default {
         const key = p.startsWith('/mcp/') ? decodeURIComponent(p.slice(5)) : bearer(request);
         const user = await authKey(env, key);
         if (!user) return cors(json({ error: 'clé invalide' }, 401));
+        track(ctx, env, user, 'mcp');
         return cors(await handleMcp(request, { ...env, viewer: user }, user));
       }
       // Pas d'OAuth : on dit clairement qu'il n'y en a pas
@@ -26,6 +27,7 @@ export default {
       if (p.startsWith('/api/') || p.startsWith('/files/')) {
         const user = await authKey(env, readCookie(request, COOKIE) || bearer(request));
         if (!user) return json({ error: 'non authentifié' }, 401);
+        if (p === '/api/bootstrap') track(ctx, env, user, 'web');
         const venv = { ...env, viewer: user };
         if (p.startsWith('/files/')) return serveFile(venv, decodeURIComponent(p.slice(7)));
         return api(request, venv, user, url);
@@ -37,6 +39,19 @@ export default {
     }
   },
 };
+
+// ---------------------------------------------------------------- suivi des connexions
+// Met à jour la dernière connexion ; une entrée « connexion » au journal par session (4 h sans activité).
+function track(ctx, env, user, via) {
+  if (!user?.id || user.id === 'admin') return;
+  const job = (async () => {
+    const u = await env.DB.prepare("SELECT last_seen FROM users WHERE id=?").bind(user.id).first();
+    const newSession = !u?.last_seen || u.last_seen < new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 19).replace('T', ' ');
+    await env.DB.prepare("UPDATE users SET last_seen=datetime('now'), last_seen_via=? WHERE id=?").bind(via, user.id).run();
+    if (newSession) await env.DB.prepare('INSERT INTO activity (who, action, summary, via) VALUES (?,?,?,?)').bind(user.id, 'connexion', via === 'mcp' ? 'Connexion depuis Claude' : 'Connexion à l’outil', via).run();
+  })().catch(() => {});
+  ctx?.waitUntil ? ctx.waitUntil(job) : null;
+}
 
 // ---------------------------------------------------------------- auth
 export async function sha256(s) {

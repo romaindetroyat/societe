@@ -44,5 +44,10 @@
 - [x] Rôles : Arnaud CMO, Kevin CTO, Romain COO ; référents des chantiers réalignés
 - [x] Journal d'activité remis à zéro (demande de Romain)
 
+## Itération 10 — suivi des connexions
+- [x] Dernière connexion par membre (web / Claude) dans « Équipe & accès » ; une ligne « connexion » par session (4 h) au journal
+- [x] Connexions visibles uniquement par l'administrateur (Romain)
+- [x] Invitations envoyées aux 4 membres ; journal remis à zéro = état initial
+
 ## Prochaine action
 Générer les clés des membres depuis « Équipe & accès », connecter Claude (MCP), puis fusion vers `main` quand validé.
