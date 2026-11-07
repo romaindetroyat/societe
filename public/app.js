@@ -65,13 +65,15 @@ function dateChip(d, done) {
   const cls = done ? '' : d < today() ? 'late' : d <= addDays(today(), 7) ? 'soon' : '';
   return `<span class="date-chip ${cls}">${esc(fmtDate(d))}</span>`;
 }
+const COLLECTIVE = ['decision', 'topic'];
+const ownerAv = (i) => (i && !COLLECTIVE.includes(i.kind) ? ownerAv(i) : '');
 const kindIcon = (k) => `<i class="ph ph-${KIND[k].icon}"></i>`;
 const lock = (i) => i.audience ? `<span class="lock" title="Visible uniquement par : ${esc(i.audience.split(',').map((u) => D.u[u.trim()]?.name || u).join(', '))}"><i class="ph ph-lock-simple"></i></span>` : '';
 function itemRow(i, opt = {}) {
   return `<div class="li" data-open="${i.id}">
     <span class="muted">${kindIcon(i.kind)}</span>
     <span class="t">${esc(i.title)}</span>
-    <span class="meta">${lock(i)}${opt.noWs ? '' : `<span class="hide-sm">${wsTag(i.workstream)}</span>`}${st(i.status)}${dateChip(keyDate(i), isDone(i))}${av(i.owner)}</span>
+    <span class="meta">${lock(i)}${opt.noWs ? '' : `<span class="hide-sm">${wsTag(i.workstream)}</span>`}${st(i.status)}${dateChip(keyDate(i), isDone(i))}${ownerAv(i)}</span>
   </div>`;
 }
 function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.append(t); setTimeout(() => t.remove(), 2600); }
@@ -209,9 +211,9 @@ VIEWS.marche = () => {
       <div class="mq-b"><div class="mq-t">${esc(i.title)}</div>
         <div class="mq-a"><i class="ph ph-arrow-bend-down-right"></i> <b>Réponse attendue :</b> ${esc(q.attendu || '')}</div>
         ${i.outcome ? `<div class="mq-a" style="color:var(--accent-text)"><i class="ph ph-check-circle"></i> ${esc(i.outcome)}</div>` : ''}
-        <div class="row" style="gap:6px;margin-top:8px">${st(i.status)}${i.decision_date ? `<span class="label">à discuter d’ici</span>${dateChip(i.decision_date, isDone(i))}` : ''}${blk.length ? `<span class="tag"><i class="ph ph-link"></i>après ${blk.map((d) => num[d] || '#' + d).join(', ')}</span>` : ''}${av(i.owner)}</div></div></li>`;
+        <div class="row" style="gap:6px;margin-top:8px">${st(i.status)}${i.decision_date ? `<span class="label">à discuter d’ici</span>${dateChip(i.decision_date, isDone(i))}` : ''}${blk.length ? `<span class="tag"><i class="ph ph-link"></i>après ${blk.map((d) => num[d] || '#' + d).join(', ')}</span>` : ''}${ownerAv(i)}</div></div></li>`;
   };
-  const small = (ids, icon) => ids.map(it).filter(Boolean).map((i) => `<div class="li" data-open="${i.id}"><span class="muted"><i class="ph ph-${icon}"></i></span><span class="t" style="font-weight:400">${esc(i.title)}</span><span class="meta">${st(i.status)}${dateChip(keyDate(i), isDone(i))}${av(i.owner)}</span></div>`).join('');
+  const small = (ids, icon) => ids.map(it).filter(Boolean).map((i) => `<div class="li" data-open="${i.id}"><span class="muted"><i class="ph ph-${icon}"></i></span><span class="t" style="font-weight:400">${esc(i.title)}</span><span class="meta">${st(i.status)}${dateChip(keyDate(i), isDone(i))}${ownerAv(i)}</span></div>`).join('');
   return `<div class="page-head"><div><div class="label">${esc(D.proj.surtitre || 'Création de société')}</div><h1 style="margin-top:10px">Tableau de marche</h1>
       <p class="muted">${esc(M.intro || 'Les étapes dans l’ordre, les questions à trancher à chaque étape et la réponse attendue.')}</p></div>
       <a class="btn" href="#/schema"><i class="ph ph-graph"></i>Schéma du montage</a></div>
@@ -547,7 +549,7 @@ function gantt(its) {
         if (i.decision_date) h += `<div class="g-mark diamond" data-open="${i.id}" title="À discuter d’ici le ${fmtDate(i.decision_date)}" style="left:${pos(i.decision_date)};background:var(--amber)"></div>`;
         if (i.due_date) h += `<div class="g-mark" data-open="${i.id}" title="Échéance ${fmtDate(i.due_date)}" style="left:${pos(i.due_date)};background:${i.start_date ? 'var(--text-2)' : c};border-radius:4px"></div>`;
         if (i.effective_date) h += `<div class="g-mark circle" data-open="${i.id}" title="Prise d’effet envisagée ${fmtDate(i.effective_date)}" style="left:${pos(i.effective_date)};background:var(--accent);border:2px solid var(--card)"></div>`;
-        return `<div class="g-row"><div class="g-name" data-open="${i.id}">${kindIcon(i.kind)}<span style="overflow:hidden;text-overflow:ellipsis">${esc(i.title)}</span><span style="margin-left:auto">${av(i.owner)}</span></div>${h}</div>`;
+        return `<div class="g-row"><div class="g-name" data-open="${i.id}">${kindIcon(i.kind)}<span style="overflow:hidden;text-overflow:ellipsis">${esc(i.title)}</span><span style="margin-left:auto">${ownerAv(i)}</span></div>${h}</div>`;
       }).join('');
   }).join('');
   return `<div class="gantt"><div class="gantt-inner">
@@ -564,7 +566,7 @@ function chrono(its) {
     const m = e.d.slice(0, 7);
     if (m !== cur) { cur = m; out += `<h2 class="tl-month">${new Date(m + '-01T12:00').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</h2>`; }
     out += `<div class="tl-item"><div class="card hover" data-open="${e.i.id}" style="padding:14px 16px"><div class="row between"><span class="label">${fmtDate(e.d, true)} · ${e.l}</span>${st(e.i.status)}</div>
-      <div class="row" style="margin-top:8px"><span class="muted">${kindIcon(e.i.kind)}</span><span style="flex:1;color:var(--text);font-weight:500">${esc(e.i.title)}</span>${av(e.i.owner)}</div><div style="margin-top:8px">${wsTag(e.i.workstream)}</div></div></div>`;
+      <div class="row" style="margin-top:8px"><span class="muted">${kindIcon(e.i.kind)}</span><span style="flex:1;color:var(--text);font-weight:500">${esc(e.i.title)}</span>${ownerAv(e.i)}</div><div style="margin-top:8px">${wsTag(e.i.workstream)}</div></div></div>`;
   }
   return `<div class="timeline">${out}</div>`;
 }
@@ -582,7 +584,7 @@ VIEWS.taches = () => {
       const l = its.filter((i) => i.status === c).sort((a, b) => (a.due_date || '9').localeCompare(b.due_date || '9'));
       return `<div class="kcol ${(S.kcol || cols[0]) === c ? 'on' : ''}" data-col="${c}"><h3>${st(c)}<span class="label">${l.length}</span></h3>${l.map((i) => `<div class="kcard" draggable="true" data-drag="${i.id}" data-open="${i.id}">
         <div class="row" style="align-items:flex-start;flex-wrap:nowrap"><span class="ws-bar" style="background:${D.w[i.workstream]?.color || 'var(--border)'}"></span><div class="t" style="flex:1">${i.priority === 'haute' ? '<i class="ph ph-arrow-fat-up prio-haute"></i> ' : ''}${esc(i.title)}</div></div>
-        <div class="row between"><span class="small muted">${esc(D.w[i.workstream]?.title || '')}</span><span class="row" style="gap:6px">${lock(i)}${i.n_comments ? `<span class="small muted"><i class="ph ph-chat-circle"></i>${i.n_comments}</span>` : ''}${dateChip(i.due_date, isDone(i))}${av(i.owner)}</span></div>
+        <div class="row between"><span class="small muted">${esc(D.w[i.workstream]?.title || '')}</span><span class="row" style="gap:6px">${lock(i)}${i.n_comments ? `<span class="small muted"><i class="ph ph-chat-circle"></i>${i.n_comments}</span>` : ''}${dateChip(i.due_date, isDone(i))}${ownerAv(i)}</span></div>
       </div>`).join('')}</div>`;
     }).join('')}</div>`;
 };
@@ -621,7 +623,7 @@ VIEWS.decisions = () => {
       <div class="row between">${wsTag(i.workstream)}${st(i.status)}</div>
       <h3 style="margin:14px 0 10px;font-size:1.15rem">${esc(i.title)}</h3>
       ${i.outcome ? `<div class="md small" style="padding:10px 12px;border-radius:12px;background:var(--accent-soft);margin-bottom:10px"><b>Position commune :</b> ${md(i.outcome)}</div>` : i.options ? `<div class="md small muted" style="max-height:7.5em;overflow:hidden">${md(i.options)}</div>` : ''}
-      <div class="row" style="margin-top:12px">${i.decision_date ? `<span class="label">À discuter d’ici</span>${dateChip(i.decision_date, isDone(i))}` : ''}${i.effective_date ? `<span class="label">Effet</span><span class="date-chip">${fmtDate(i.effective_date)}</span>` : ''}<span class="spacer"></span>${av(i.owner)}</div>
+      <div class="row" style="margin-top:12px">${i.decision_date ? `<span class="label">À discuter d’ici</span>${dateChip(i.decision_date, isDone(i))}` : ''}${i.effective_date ? `<span class="label">Effet</span><span class="date-chip">${fmtDate(i.effective_date)}</span>` : ''}<span class="spacer"></span>${ownerAv(i)}</div>
     </div>`).join('') || '<div class="empty">Aucune question</div>'}</div>
     <div class="section card"><div class="section-head"><h2>Sujets en discussion</h2><span class="label">${top.length}</span></div><div class="list">${top.map((i) => itemRow(i)).join('') || '<div class="empty">Aucun sujet</div>'}</div></div>`;
 };
@@ -640,7 +642,7 @@ VIEWS.documents = () => {
       <div class="row between"><span class="ico" style="width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:1.4rem;background:${D.w[i.workstream]?.color || 'var(--bg-2)'};color:${D.w[i.workstream]?.fg || 'var(--text)'}"><i class="ph ph-${fileIcon(i)}"></i></span>${st(i.status)}</div>
       <h3 style="margin:14px 0 6px">${esc(i.title)}</h3>
       <div class="small muted" style="min-height:2.6em">${esc((i.body || '').replace(/[#*_>`-]/g, '').slice(0, 100))}</div>
-      <div class="row" style="margin-top:10px">${lock(i)}${i.file_key ? '<span class="tag accent"><i class="ph ph-paperclip"></i>Fichier</span>' : ''}${i.url ? '<span class="tag"><i class="ph ph-link"></i>Lien</span>' : ''}<span class="spacer"></span>${dateChip(i.due_date, isDone(i))}${av(i.owner)}</div>
+      <div class="row" style="margin-top:10px">${lock(i)}${i.file_key ? '<span class="tag accent"><i class="ph ph-paperclip"></i>Fichier</span>' : ''}${i.url ? '<span class="tag"><i class="ph ph-link"></i>Lien</span>' : ''}<span class="spacer"></span>${dateChip(i.due_date, isDone(i))}${ownerAv(i)}</div>
     </div>`).join('') || '<div class="empty">Aucun document</div>'}</div>`;
 };
 function drivePreview(url) {
@@ -732,7 +734,7 @@ async function openItem(id, preset = {}) {
         ${!id ? f('kind', 'Type', `<select class="input" name="kind" data-kindswitch>${Object.entries(KIND).map(([kk, v]) => `<option value="${kk}" ${kk === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select>`) : ''}
         <div class="fgrid">
           ${f('status', 'Statut', `<select class="input" name="status">${statuses.map((s) => `<option value="${s}" ${it.status === s ? 'selected' : ''}>${ST_LABEL[s]}</option>`).join('')}</select>`)}
-          ${f('owner', 'Référent pressenti', `<select class="input" name="owner"><option value="">—</option>${D.users.map((u) => `<option value="${u.id}" ${it.owner === u.id ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select>`)}
+          ${COLLECTIVE.includes(k) ? '<input type="hidden" name="owner" value="">' : f('owner', 'Référent pressenti', `<select class="input" name="owner"><option value="">—</option>${D.users.map((u) => `<option value="${u.id}" ${it.owner === u.id ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select>`)}
           ${f('workstream', 'Chantier', `<select class="input" name="workstream"><option value="">—</option>${D.workstreams.map((w) => `<option value="${w.id}" ${it.workstream === w.id ? 'selected' : ''}>${esc(w.title)}</option>`).join('')}</select>`)}
           ${f('priority', 'Priorité', `<select class="input" name="priority">${['haute', 'normale', 'basse'].map((p) => `<option ${it.priority === p ? 'selected' : ''}>${p}</option>`).join('')}</select>`)}
           ${dates.join('')}
