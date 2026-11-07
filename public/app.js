@@ -3,6 +3,8 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 // typographie française : espace insécable avant ? ! : ; % € »
 const nb = (s) => String(s ?? '').replace(/ ([?!:;%€»])/g, '\u00a0$1').replace(/« /g, '«\u00a0');
+// escA : échappement sans retouche typographique, pour les champs de formulaire
+const escA = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const esc = (s) => nb(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const md = (s) => (s ? DOMPurify.sanitize(marked.parse(nb(s))) : '');
 const today = () => new Date().toISOString().slice(0, 10);
@@ -708,10 +710,10 @@ async function openItem(id, preset = {}) {
   const k = it.kind;
   const statuses = D.kinds[k].statuses;
   const f = (name, label, input) => `<label class="field"><span>${label}</span>${input}</label>`;
-  const inp = (n, type = 'text') => `<input class="input" type="${type}" name="${n}" value="${esc(it[n] ?? '')}" ${type === 'number' ? 'step="any"' : ''}>`;
+  const inp = (n, type = 'text') => `<input class="input" type="${type}" name="${n}" value="${escA(it[n] ?? '')}" ${type === 'number' ? 'step="any"' : ''}>`;
   const extra = EXTRA[k].map((n) => {
     const label = k === 'event' && n === 'due_date' ? 'Date' : F_LABEL[n];
-    if (n === 'options' || n === 'outcome') return f(n, label, `<textarea class="input" name="${n}" placeholder="Markdown">${esc(it[n] || '')}</textarea>`);
+    if (n === 'options' || n === 'outcome') return f(n, label, `<textarea class="input" name="${n}" placeholder="Markdown">${escA(it[n] || '')}</textarea>`);
     if (n === 'amount') return f(n, label, inp(n, 'number'));
     if (n === 'url') return f(n, label, inp(n, 'url'));
     return f(n, label, inp(n, 'date'));
@@ -727,7 +729,7 @@ async function openItem(id, preset = {}) {
   const others2 = D.items.filter((x) => x.id !== it.id);
   const html = `<div class="modal-bg" id="modal"><form class="modal" id="itemform">
     <div class="modal-head"><span class="ico" style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--accent);color:#0A0A0A">${kindIcon(k)}</span>
-      <div style="flex:1;min-width:0"><div class="label">${id ? `#${it.id} · ` : 'Nouveau · '}${KIND[k].label}</div><input class="title-input" name="title" value="${esc(it.title || '')}" placeholder="${k === 'document' ? 'Nom du document' : 'Formulez une question…'}" required></div>
+      <div style="flex:1;min-width:0"><div class="label">${id ? `#${it.id} · ` : 'Nouveau · '}${KIND[k].label}</div><input class="title-input" name="title" value="${escA(it.title || '')}" placeholder="${k === 'document' ? 'Nom du document' : 'Formulez une question…'}" required></div>
       <button type="button" class="btn icon ghost" data-close><i class="ph ph-x"></i></button></div>
     <div class="modal-body">
       <div>
@@ -742,7 +744,7 @@ async function openItem(id, preset = {}) {
         ${others.join('')}
         <div class="field"><span>Visible par <span class="muted" style="text-transform:none;letter-spacing:0">(aucune case = tout le monde)</span></span>
           <div class="row" style="gap:6px">${D.users.map((u) => `<label class="chip ${(it.audience || '').split(',').includes(u.id) ? 'on' : ''}"><input type="checkbox" name="aud" value="${u.id}" ${(it.audience || '').split(',').includes(u.id) ? 'checked' : ''} hidden onchange="this.parentElement.classList.toggle('on', this.checked)">${av(u.id)}${esc(u.name.split(' ')[0])}</label>`).join('')}</div></div>
-        ${f('body', 'Description (markdown)', `<textarea class="input" name="body" style="min-height:160px">${esc(it.body || '')}</textarea>`)}
+        ${f('body', 'Description (markdown)', `<textarea class="input" name="body" style="min-height:160px">${escA(it.body || '')}</textarea>`)}
       </div>
       <div class="col" style="gap:16px">
         ${preview}
@@ -802,7 +804,7 @@ function formModal(title, fields, values, onSave, extra = '') {
   closeModal();
   document.body.insertAdjacentHTML('beforeend', `<div class="modal-bg" id="modal"><form class="modal narrow" id="fm">
     <div class="modal-head"><h2 style="flex:1">${esc(title)}</h2><button type="button" class="btn icon ghost" data-close><i class="ph ph-x"></i></button></div>
-    <div class="modal-body single">${fields.map(([n, l, t]) => `<label class="field"><span>${l}</span>${t === 'textarea' ? `<textarea class="input" name="${n}">${esc(values[n] || '')}</textarea>` : Array.isArray(t) ? `<select class="input" name="${n}"><option value="">—</option>${t.map(([v, lab]) => `<option value="${esc(v)}" ${values[n] === v ? 'selected' : ''}>${esc(lab)}</option>`).join('')}</select>` : `<input class="input" name="${n}" type="${t || 'text'}" value="${esc(values[n] ?? '')}">`}</label>`).join('')}${extra}</div>
+    <div class="modal-body single">${fields.map(([n, l, t]) => `<label class="field"><span>${l}</span>${t === 'textarea' ? `<textarea class="input" name="${n}">${escA(values[n] || '')}</textarea>` : Array.isArray(t) ? `<select class="input" name="${n}"><option value="">—</option>${t.map(([v, lab]) => `<option value="${esc(v)}" ${values[n] === v ? 'selected' : ''}>${esc(lab)}</option>`).join('')}</select>` : `<input class="input" name="${n}" type="${t || 'text'}" value="${escA(values[n] ?? '')}">`}</label>`).join('')}${extra}</div>
     <div class="modal-foot">${values.id && onSave.del ? `<button type="button" class="btn danger ghost" data-del style="margin-right:auto"><i class="ph ph-trash"></i>Supprimer</button>` : ''}<button type="button" class="btn" data-close>Annuler</button><button class="btn primary"><i class="ph ph-check"></i>Enregistrer</button></div></form></div>`);
   const m = $('#modal');
   m.addEventListener('click', (e) => { if (e.target === m || e.target.closest('[data-close]')) closeModal(); });

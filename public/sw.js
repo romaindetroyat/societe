@@ -1,5 +1,5 @@
 // Service worker : coquille en cache (stale-while-revalidate), données réseau d'abord avec repli hors ligne
-const V = 'pilotage-v11';
+const V = 'pilotage-v12';
 const SHELL = ['/', '/index.html', '/app.js', '/styles.css', '/manifest.webmanifest', '/icons/icon.svg'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(V).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => {
