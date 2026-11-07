@@ -226,7 +226,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
 .chip.plain { padding: 7px 14px; }
 select.input, .input { padding: 10px 14px; border-radius: var(--r-md); border: 1px solid var(--border-strong); background: var(--card); outline: none; min-height: 40px; width: 100%; }
-select.input.inline { width: auto; border-radius: var(--r-full); }
+select.input.inline { width: auto; max-width: 100%; border-radius: var(--r-full); }
 .input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
 textarea.input { min-height: 110px; resize: vertical; line-height: 1.5; }
 
@@ -456,3 +456,8 @@ table.tbl tr:hover td { background: var(--card-2); }
   .app { display: block; }
   .view { padding: 0; }
 }
+
+/* garde-fous contre les débordements horizontaux */
+.tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.card { min-width: 0; }
+.filters > * { max-width: 100%; }

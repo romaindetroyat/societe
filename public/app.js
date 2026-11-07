@@ -66,7 +66,7 @@ function dateChip(d, done) {
   return `<span class="date-chip ${cls}">${esc(fmtDate(d))}</span>`;
 }
 const COLLECTIVE = ['decision', 'topic'];
-const ownerAv = (i) => (i && !COLLECTIVE.includes(i.kind) ? ownerAv(i) : '');
+const ownerAv = (i) => (i && !COLLECTIVE.includes(i.kind) ? av(i.owner) : '');
 const kindIcon = (k) => `<i class="ph ph-${KIND[k].icon}"></i>`;
 const lock = (i) => i.audience ? `<span class="lock" title="Visible uniquement par : ${esc(i.audience.split(',').map((u) => D.u[u.trim()]?.name || u).join(', '))}"><i class="ph ph-lock-simple"></i></span>` : '';
 function itemRow(i, opt = {}) {
@@ -618,7 +618,7 @@ VIEWS.decisions = () => {
   const top = items({ kind: 'topic', ws: f.ws, owner: f.owner });
   return `<div class="page-head"><div><div class="label">À discuter ensemble</div><h1 style="margin-top:10px">Questions ouvertes</h1><p class="muted">Les questions à trancher ensemble, avec les pistes évoquées et un calendrier indicatif. Rien n’est acté sans l’accord de tous.</p></div>
     <div class="row"><button class="btn primary" data-act="new" data-kind="decision"><i class="ph ph-plus"></i>Nouvelle question</button><button class="btn" data-act="new" data-kind="topic"><i class="ph ph-plus"></i>Sujet</button></div></div>
-    <div class="filters">${ownerChips('d')}${wsSelect('d')}</div>
+    <div class="filters">${wsSelect('d')}</div>
     <div class="grid g2">${dec.map((i) => `<div class="card hover" data-open="${i.id}" style="${isDone(i) ? 'opacity:.7' : ''}">
       <div class="row between">${wsTag(i.workstream)}${st(i.status)}</div>
       <h3 style="margin:14px 0 10px;font-size:1.15rem">${esc(i.title)}</h3>
