@@ -32,7 +32,7 @@ const F_LABEL = { start_date: 'Début envisagé', due_date: 'Échéance envisag�
 const PALETTE = [['#C7EB00', '#0A0A0A'], ['#2A2A2A', '#FAFAFA'], ['#9BBF00', '#0A0A0A'], ['#5F7380', '#FAFAFA'], ['#A3A3A3', '#0A0A0A'], ['#4E7A00', '#FAFAFA'], ['#E0A526', '#0A0A0A'], ['#3E8E7E', '#FAFAFA'], ['#C77B58', '#FAFAFA'], ['#D4F234', '#0A0A0A'], ['#6B6B6B', '#FAFAFA']];
 
 let D = null; // données
-const S = { filters: {}, roadmapMode: null, docStatus: null, schemaTab: 'structure', zoom: null };
+const S = { hide: new Set(), filters: {}, roadmapMode: null, docStatus: null, schemaTab: 'structure', zoom: null };
 
 // ------------------------------------------------------------------ API
 async function api(path, opts = {}) {
@@ -79,23 +79,24 @@ function copy(text) { navigator.clipboard?.writeText(text).then(() => toast('Cop
 
 // ------------------------------------------------------------------ coquille
 const NAV = [
-  ['accueil', 'squares-four', 'Cockpit'],
-  ['schema', 'graph', 'Schéma'],
-  ['feuille-de-route', 'path', 'Feuille de route'],
+  ['marche', 'list-numbers', 'Tableau de marche'],
+  ['schema', 'graph', 'Schéma du montage'],
   ['decisions', 'question', 'Questions ouvertes'],
   ['taches', 'kanban', 'Étapes'],
   ['documents', 'files', 'Documents'],
+  ['feuille-de-route', 'calendar-dots', 'Calendrier'],
   ['contacts', 'address-book', 'Contacts'],
   null,
+  ['accueil', 'squares-four', 'Vue d’ensemble'],
   ['activite', 'clock-counter-clockwise', 'Activité'],
   ['claude', 'plugs-connected', 'Connecter Claude'],
 ];
 function shell() {
-  const route = location.hash.slice(2).split('/')[0] || 'accueil';
+  const route = location.hash.slice(2).split('/')[0] || 'marche';
   const counts = { taches: items({ kind: 'task', open: true }).length, decisions: items({ kind: 'decision', open: true }).length, documents: items({ kind: 'document', open: true }).length };
   const nav = NAV.map((n) => n ? `<a href="#/${n[0]}" class="${route === n[0] ? 'active' : ''}"><i class="ph ph-${n[1]}"></i>${n[2]}${counts[n[0]] ? `<span class="count">${counts[n[0]]}</span>` : ''}</a>` : '<div class="sep"></div>').join('')
     + (D.me.is_admin ? `<a href="#/equipe" class="${route === 'equipe' ? 'active' : ''}"><i class="ph ph-users-three"></i>Équipe & accès</a>` : '');
-  const mob = [['accueil', 'squares-four', 'Cockpit'], ['feuille-de-route', 'path', 'Route'], ['decisions', 'question', 'Questions'], ['taches', 'kanban', 'Étapes'], ['plus', 'dots-three-outline', 'Plus']];
+  const mob = [['marche', 'list-numbers', 'Marche'], ['schema', 'graph', 'Montage'], ['decisions', 'question', 'Questions'], ['taches', 'kanban', 'Étapes'], ['plus', 'dots-three-outline', 'Plus']];
   $('#root').innerHTML = `<div class="app">
     <nav class="nav">
       <div class="brand"><div class="name">${esc(D.proj.nom || 'Nouvelle société')}</div><div class="label sub">${esc(D.proj.phase || 'Pilotage du projet')}</div></div>
@@ -182,13 +183,66 @@ VIEWS.chantier = (id) => {
     <div class="grid g2">${groups.map(([k, l]) => `<div class="card"><div class="section-head"><h3>${kindIcon(k)} ${KIND[k].plural}</h3><span class="label">${l.length}</span></div><div class="list">${l.map((i) => itemRow(i, { noWs: true })).join('')}</div></div>`).join('') || '<div class="empty">Aucun élément</div>'}</div>`;
 };
 
+// ------------------------------------------------------------------ tableau de marche
+VIEWS.marche = () => {
+  const M = D.settings.marche;
+  if (!M?.phases?.length) return '<div class="empty">Tableau de marche non défini.</div>';
+  const it = (id) => D.i[id];
+  const num = {};
+  M.phases.forEach((p, pi) => (p.questions || []).forEach((q, qi) => (num[q.id] = `${pi + 1}.${qi + 1}`)));
+  const stats = M.phases.map((p) => {
+    const ids = [...(p.questions || []).map((q) => q.id), ...(p.etapes || []), ...(p.documents || []), ...(p.jalons || [])].filter(it);
+    const done = ids.filter((id) => isDone(it(id))).length;
+    return { n: ids.length, done, pct: ids.length ? Math.round((100 * done) / ids.length) : 0 };
+  });
+  const cur = Math.max(0, stats.findIndex((s) => s.done < s.n));
+  const P = M.phases[cur];
+  // prochaines actions : questions débloquées (dépendances traitées), puis étapes les plus proches
+  const ready = (P.questions || []).filter((q) => it(q.id) && !isDone(it(q.id)) && (q.apres || []).every((d) => it(d) && isDone(it(d))));
+  const nextSteps = (P.etapes || []).map(it).filter((i) => i && !isDone(i)).sort((a, b) => (keyDate(a) || '9').localeCompare(keyDate(b) || '9'));
+  const nextJ = (P.jalons || []).map(it).filter((i) => i && !isDone(i));
+  const qLine = (q) => {
+    const i = it(q.id); if (!i) return '';
+    const blk = (q.apres || []).filter((d) => it(d) && !isDone(it(d)));
+    return `<li class="mq ${isDone(i) ? 'done' : ''}" data-open="${i.id}">
+      <span class="mq-n">${num[q.id]}</span>
+      <div class="mq-b"><div class="mq-t">${esc(i.title)}</div>
+        <div class="mq-a"><i class="ph ph-arrow-bend-down-right"></i> <b>Réponse attendue :</b> ${esc(q.attendu || '')}</div>
+        ${i.outcome ? `<div class="mq-a" style="color:var(--accent-text)"><i class="ph ph-check-circle"></i> ${esc(i.outcome)}</div>` : ''}
+        <div class="row" style="gap:6px;margin-top:8px">${st(i.status)}${i.decision_date ? `<span class="label">à discuter d’ici</span>${dateChip(i.decision_date, isDone(i))}` : ''}${blk.length ? `<span class="tag"><i class="ph ph-link"></i>après ${blk.map((d) => num[d] || '#' + d).join(', ')}</span>` : ''}${av(i.owner)}</div></div></li>`;
+  };
+  const small = (ids, icon) => ids.map(it).filter(Boolean).map((i) => `<div class="li" data-open="${i.id}"><span class="muted"><i class="ph ph-${icon}"></i></span><span class="t" style="font-weight:400">${esc(i.title)}</span><span class="meta">${st(i.status)}${dateChip(keyDate(i), isDone(i))}${av(i.owner)}</span></div>`).join('');
+  return `<div class="page-head"><div><div class="label">${esc(D.proj.surtitre || 'Création de société')}</div><h1 style="margin-top:10px">Tableau de marche</h1>
+      <p class="muted">${esc(M.intro || 'Les étapes dans l’ordre, les questions à trancher à chaque étape et la réponse attendue.')}</p></div>
+      <a class="btn" href="#/schema"><i class="ph ph-graph"></i>Schéma du montage</a></div>
+    ${D.proj.avertissement ? `<div class="notice light"><i class="ph ph-info"></i><span>${esc(D.proj.avertissement)}</span></div>` : ''}
+    <div class="stepper-x">${M.phases.map((p, i) => `<a href="#ph-${i}" data-scroll="ph-${i}" class="sx ${i < cur ? 'done' : i === cur ? 'on' : ''}"><span class="sx-n">${i < cur ? '<i class="ph ph-check"></i>' : i + 1}</span><span class="sx-t">${esc(p.court || p.titre)}</span><span class="sx-d">${p.fin ? 'd’ici le ' + fmtDate(p.fin) : ''}</span><span class="sx-bar"><i style="width:${stats[i].pct}%"></i></span></a>`).join('')}</div>
+    <div class="card now"><div class="row between"><div><div class="label">Maintenant · étape ${cur + 1}</div><h2 style="margin-top:6px">${esc(P.titre)}</h2></div><span class="tag accent">${stats[cur].done}/${stats[cur].n} traités</span></div>
+      <div class="grid g2" style="margin-top:14px">
+        <div><div class="label" style="margin-bottom:8px">Questions à trancher maintenant</div><div class="list">${ready.slice(0, 4).map((q) => small([q.id], 'question')).join('') || '<div class="muted small">Aucune question débloquée.</div>'}</div></div>
+        <div><div class="label" style="margin-bottom:8px">Prochaines étapes</div><div class="list">${small([...nextJ.slice(0, 2), ...nextSteps.slice(0, 4)].map((i) => i.id), 'arrow-right')}</div></div>
+      </div></div>
+    ${M.phases.map((p, pi) => `<section class="phase ${pi < cur ? 'is-done' : pi === cur ? 'is-on' : ''}" id="ph-${pi}">
+      <div class="ph-head"><span class="ph-n">${pi + 1}</span><div style="flex:1;min-width:0"><h2>${esc(p.titre)}</h2><div class="muted small" style="margin-top:4px">${esc(p.objectif || '')}</div></div>
+        <div class="ph-meta">${p.fin ? `<span class="date-chip">d’ici le ${fmtDate(p.fin, true)}</span>` : ''}<div class="progress" style="width:120px;margin-top:8px"><i style="width:${stats[pi].pct}%"></i></div></div></div>
+      ${p.resultat ? `<div class="ph-res"><i class="ph ph-flag-checkered"></i><span><b>Résultat attendu :</b> ${esc(p.resultat)}</span></div>` : ''}
+      <div class="ph-grid">
+        <div><div class="label" style="margin-bottom:10px">Questions à trancher, dans l’ordre</div><ol class="mqs">${(p.questions || []).map(qLine).join('') || '<div class="muted small">—</div>'}</ol></div>
+        <div class="col" style="gap:18px">
+          ${(p.jalons || []).length ? `<div><div class="label" style="margin-bottom:6px">Rendez-vous</div><div class="list">${small(p.jalons, 'flag-banner')}</div></div>` : ''}
+          ${(p.etapes || []).length ? `<div><div class="label" style="margin-bottom:6px">Étapes</div><div class="list">${small(p.etapes, 'check-square')}</div></div>` : ''}
+          ${(p.documents || []).length ? `<div><div class="label" style="margin-bottom:6px">Documents produits</div><div class="list">${small(p.documents, 'file-text')}</div></div>` : ''}
+        </div>
+      </div></section>`).join('')}`;
+};
+
 // ------------------------------------------------------------------ schéma
 VIEWS.schema = async () => {
   const t = S.schemaTab;
   await Promise.all([document.fonts.load(FN_LABEL), document.fonts.load(FN_SUB), document.fonts.load(FN_EDGE)]).catch(() => {});
-  return `<div class="page-head"><div><div class="label">Vue d’ensemble</div><h1 style="margin-top:10px">Schéma du projet</h1>
-    <p class="muted">${t === 'structure' ? 'Structure envisagée, flux et partenaires : hypothèses de travail à discuter. Cliquez un bloc pour le détail.' : 'Tous les chantiers et leur avancement. Cliquez un chantier pour l’ouvrir.'}</p></div>
-    <div class="tabs"><button data-tab="structure" class="${t === 'structure' ? 'on' : ''}">Structure & flux</button><button data-tab="chantiers" class="${t === 'chantiers' ? 'on' : ''}">Carte des chantiers</button></div></div>
+  return `<div class="page-head"><div><div class="label">Montage envisagé</div><h1 style="margin-top:10px">Schéma du montage</h1>
+    <p class="muted">${t === 'structure' ? 'Qui détient quoi, qui fait quoi, qui paie qui : hypothèses de travail à discuter. Cliquez un bloc pour le détail, ou un type de flux dans la légende pour l’afficher ou le masquer.' : 'Tous les chantiers et leur avancement. Cliquez un chantier pour l’ouvrir.'}</p></div>
+    <div class="tabs"><button data-tab="structure" class="${t === 'structure' ? 'on' : ''}">Montage complet</button><button data-tab="chantiers" class="${t === 'chantiers' ? 'on' : ''}">Carte des chantiers</button></div></div>
     ${t === 'structure' ? structureDiagram() : chantiersMap()}`;
 };
 
@@ -204,7 +258,7 @@ function wrapText(text, font, max, ls = 0) {
   return lines;
 }
 const EDGE_COLOR = { capital: 'var(--text-2)', flow: 'var(--accent-line)', money: 'var(--amber)', service: 'var(--slate)', partner: 'var(--muted)' };
-const EDGE_LEGEND = [['capital', 'Détention du capital (envisagée)'], ['flow', 'Prestations'], ['money', 'Flux financiers'], ['service', 'Ressources / sous-traitance'], ['partner', 'Cadre & partenariats']];
+const EDGE_LEGEND = [['capital', 'Capital'], ['flow', 'Prestations aux clients'], ['money', 'Argent (salaire, commandes, financements)'], ['service', 'Travail fourni / sous-traitance'], ['partner', 'Réseau & partenariats']];
 
 function layoutStructure(sch, W) {
   const mobile = W < 700;
@@ -323,7 +377,8 @@ function structureDiagram() {
   const avail = Math.max(320, ($('#view')?.clientWidth || innerWidth) - 4);
   if (avail < 700) return structureList(sch);
   const W = avail >= 900 ? 1200 : Math.round(avail);
-  const L = layoutStructure(sch, W), E = routeEdges(sch, L), mobile = W < 700;
+  const schF = { ...sch, edges: (sch.edges || []).filter((e) => !S.hide.has(e.type)) };
+  const L = layoutStructure(schF, W), E = routeEdges(schF, L), mobile = W < 700;
   const markers = Object.entries(EDGE_COLOR).map(([k, c]) => `<marker id="arr-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${c}"/></marker>`).join('');
   const zones = L.zones.map((z) => `<g><rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="22" fill="var(--zone)" stroke="var(--border-strong)" stroke-dasharray="4 6"/><text x="${z.lab?.x ?? z.x + 18}" y="${z.y + 22}" text-anchor="${z.lab?.anchor || 'start'}" class="dg-label" style="text-transform:uppercase;letter-spacing:.14em;fill:var(--muted)">${esc(z.label)}</text>${z.noteBox ? `<g><rect x="${z.noteBox[0]}" y="${z.noteBox[1]}" width="${z.noteBox[2] - z.noteBox[0]}" height="22" rx="11" fill="var(--card)" stroke="${EDGE_COLOR[z.noteType] || 'var(--amber)'}"/><text x="${z.noteBox[0] + 12}" y="${z.noteBox[1] + 15}" class="dg-label" style="fill:var(--text-2)">↻ ${esc(z.note)}</text></g>` : ''}</g>`).join('');
   const edges = E.map((e) => `<g data-edge="${e.idx}" data-from="${esc(e.from)}" data-to="${esc(e.to)}"><path class="dg-edge ${e.type !== 'capital' ? 'flow' : ''}" d="M${e.p[0]},${e.p[1]} C${e.c[0]},${e.c[1]} ${e.c[2]},${e.c[3]} ${e.p[2]},${e.p[3]}" style="stroke:${EDGE_COLOR[e.type] || 'var(--border-strong)'}" marker-end="url(#arr-${e.type})"/></g>`).join('');
@@ -346,7 +401,7 @@ function structureDiagram() {
     ${mobile ? '' : `<div class="dg-tools"><button class="btn icon sm" data-zoom="1.2" title="Dézoomer"><i class="ph ph-minus"></i></button><button class="btn icon sm" data-zoom="0.83" title="Zoomer"><i class="ph ph-plus"></i></button><button class="btn icon sm" data-zoom="0" title="Recentrer"><i class="ph ph-arrows-in"></i></button></div>`}
     <svg id="dgsvg" viewBox="${(!mobile && S.zoom) || `0 0 ${L.W} ${L.H}`}" data-vb="0 0 ${L.W} ${L.H}" data-pan="${mobile ? 0 : 1}"><defs>${markers}</defs>${zones}${edges}${labels}${nodes}</svg>
     <div id="dgpanel"></div>
-    <div class="legend">${EDGE_LEGEND.map(([k, l]) => `<span><i class="sw" style="background:${EDGE_COLOR[k]}"></i>${l}</span>`).join('')}<span class="muted"><i class="ph ph-question"></i> « ? » = hypothèse à discuter</span></div>
+    <div class="legend">${EDGE_LEGEND.map(([k, l]) => `<button class="lg ${S.hide.has(k) ? 'off' : ''}" data-etype="${k}" title="Afficher / masquer"><i class="sw" style="background:${EDGE_COLOR[k]}"></i>${l}</button>`).join('')}<span class="muted"><i class="ph ph-question"></i> « ? » = hypothèse à discuter</span></div>
   </div>`;
 }
 // version mobile : sections empilées, relations écrites dans chaque carte
@@ -788,7 +843,7 @@ async function render() {
   const [route, arg] = location.hash.slice(2).split('/');
   if (route === 'plus') return renderPlus();
   shell();
-  const v = VIEWS[route || 'accueil'] || VIEWS.accueil;
+  const v = VIEWS[route || 'marche'] || VIEWS.marche;
   $('#view').innerHTML = await v(arg);
   bindDiagram();
   if (route === 'taches') bindKanban();
@@ -824,6 +879,8 @@ document.addEventListener('click', async (e) => {
   const rm = t.closest('[data-rm]'); if (rm) { S.roadmapMode = rm.dataset.rm; return render(); }
   const ow = t.closest('[data-owner]'); if (ow) { const [sc, id] = ow.dataset.owner.split(':'); S.filters[sc] = { ...(S.filters[sc] || {}), owner: id || null }; return render(); }
   const tg = t.closest('[data-toggle]'); if (tg) { const [sc, k] = tg.dataset.toggle.split('.'); S.filters[sc] = { ...(S.filters[sc] || {}), [k]: !S.filters[sc]?.[k] }; return render(); }
+  const sc = t.closest('[data-scroll]'); if (sc) { e.preventDefault(); document.getElementById(sc.dataset.scroll)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  const et = t.closest('[data-etype]'); if (et) { const k = et.dataset.etype; S.hide.has(k) ? S.hide.delete(k) : S.hide.add(k); return render(); }
   const kc = t.closest('[data-kcol]'); if (kc) { S.kcol = kc.dataset.kcol; return render(); }
   const ds = t.closest('[data-docst]'); if (ds) { S.docStatus = ds.dataset.docst || null; return render(); }
   const ct = t.closest('[data-contact]'); if (ct) return contactModal(D.contacts.find((c) => c.id === +ct.dataset.contact));
@@ -880,12 +937,12 @@ async function tryLogin(key) {
   const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) });
   if (!r.ok) return showLogin('Clé invalide');
   store.set('key', key);
-  location.hash = '#/accueil';
+  location.hash = '#/marche';
   await start();
 }
 async function start() {
   const m = location.hash.match(/[?&]k=([^&]+)/) || location.search.match(/[?&]k=([^&]+)/);
-  if (m) { history.replaceState(null, '', '/#/accueil'); return tryLogin(decodeURIComponent(m[1])); }
+  if (m) { history.replaceState(null, '', '/#/marche'); return tryLogin(decodeURIComponent(m[1])); }
   try { await load(); render(); } catch (e) { if (!D) showLogin(); }
 }
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});

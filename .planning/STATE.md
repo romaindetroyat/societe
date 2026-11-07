@@ -29,5 +29,10 @@
 - [x] Majorité des 3/4 enregistrée comme proposition de Romain (question « gouvernance »)
 - [x] Document « Pacte d'associés » : liste de travail exhaustive (15 thèmes, ~90 questions) issue de 18 modèles et guides publiés, liée aux questions concernées
 
+## Itération 7 — clarté
+- [x] Tableau de marche (page d'accueil) : 5 étapes ordonnées, questions numérotées avec réponse attendue et dépendances, rendez-vous, étapes, documents, étape en cours mise en avant (paramètre `marche`)
+- [x] Schéma du montage complet : capital, prestations, argent (salaire, activités confiées, dividendes), travail fourni ; filtres par type de flux
+- [x] Outil MCP `tableau_de_marche`
+
 ## Prochaine action
 Générer les clés des membres depuis « Équipe & accès », connecter Claude (MCP), puis fusion vers `main` quand validé.

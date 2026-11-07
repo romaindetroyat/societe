@@ -37,6 +37,32 @@ const TOOLS = [
     },
   },
   {
+    name: 'tableau_de_marche',
+    description: "Tableau de marche : les étapes du projet dans l'ordre, et pour chacune les questions à trancher (ordre, réponse attendue, dépendances, statut), les rendez-vous, étapes et documents. Indique l'étape en cours.",
+    inputSchema: { type: 'object', properties: {} },
+    run: async (env) => {
+      const m = await env.DB.prepare("SELECT value FROM settings WHERE key='marche'").first();
+      if (!m) return 'Tableau de marche non défini.';
+      const M = JSON.parse(m.value);
+      const all = (await env.DB.prepare('SELECT * FROM items').all()).results.filter((i) => db.canSee(env, i));
+      const I = Object.fromEntries(all.map((i) => [i.id, i]));
+      const done = (i) => i && (db.KINDS[i.kind]?.done || []).includes(i.status);
+      let cur = -1, md = `# Tableau de marche\n`;
+      M.phases.forEach((p, pi) => {
+        const ids = [...(p.questions || []).map((q) => q.id), ...(p.etapes || []), ...(p.documents || []), ...(p.jalons || [])].filter((id) => I[id]);
+        const ok = ids.filter((id) => done(I[id])).length;
+        if (cur < 0 && ok < ids.length) cur = pi;
+        md += `\n## ${pi + 1}. ${p.titre}${cur === pi ? ' ← étape en cours' : ''} (d'ici le ${p.fin}, ${ok}/${ids.length} traités)\nObjectif : ${p.objectif}\nRésultat attendu : ${p.resultat}\n`;
+        (p.questions || []).forEach((q, qi) => { const i = I[q.id]; if (i) md += `- Q${pi + 1}.${qi + 1} [#${i.id}] ${i.title} — ${i.status}${i.outcome ? ' — position commune : ' + i.outcome : ''}\n  Réponse attendue : ${q.attendu}${q.apres ? `\n  Après : ${q.apres.map((d) => '#' + d).join(', ')}` : ''}\n`; });
+        for (const [lab, key] of [['Rendez-vous', 'jalons'], ['Étapes', 'etapes'], ['Documents', 'documents']]) {
+          const l = (p[key] || []).map((id) => I[id]).filter(Boolean);
+          if (l.length) md += `${lab} : ${l.map((i) => `#${i.id} ${i.title} (${i.status}${i.due_date ? ', ' + i.due_date : ''})`).join(' ; ')}\n`;
+        }
+      });
+      return md;
+    },
+  },
+  {
     name: 'lister',
     description: 'Lister / rechercher les éléments (étapes = task, questions à trancher ensemble = decision, documents, jalons, sujets) avec filtres.',
     inputSchema: {
