@@ -51,3 +51,10 @@
 
 ## Prochaine action
 Générer les clés des membres depuis « Équipe & accès », connecter Claude (MCP), puis fusion vers `main` quand validé.
+
+## Itération 6 — Meridia, trois associés
+- [x] Nom retenu : **Meridia** (question « nom » tranchée ; disponibilité INPI / Infogreffe / domaine à vérifier)
+- [x] TVT Innovation n'entre pas au capital : redevient partenaire (cadre pour l'acculturation) ; questions, étape et pièces liées au capital supprimées
+- [x] Trois associés à un tiers chacun : Altapyx Méditerranée, sociétés de Kevin et d'Arnaud ; schéma, tableau de marche, pacte et Legalstart mis à jour
+- [x] Majorité des 3/4 : signalé qu'à trois associés elle revient à l'unanimité (question : 2 sur 3 ?)
+- [x] Accès de Kevin et Arnaud révoqués ; contact d'Arnaud sur son adresse perso

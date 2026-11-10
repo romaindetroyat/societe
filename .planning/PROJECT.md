@@ -1,7 +1,7 @@
-# PROJECT — Pilotage NewCo
+# PROJECT — Pilotage Meridia
 
 ## Vision
-Un cockpit unique, partagé par les 5 personnes du projet, pour piloter la création et le démarrage de la nouvelle société (successeur du consortium Take Off) : chantiers, décisions à trancher, documents, budget, feuille de route, contacts — consultable et modifiable depuis le web (PWA) et depuis Claude (MCP).
+Un cockpit unique, partagé par les 5 personnes du projet, pour piloter la création et le démarrage de Meridia (successeur du consortium Take Off) : chantiers, décisions à trancher, documents, budget, feuille de route, contacts — consultable et modifiable depuis le web (PWA) et depuis Claude (MCP).
 
 ## Contraintes
 - Très léger : pas de framework front, pas d'étape de build, un seul Worker Cloudflare.

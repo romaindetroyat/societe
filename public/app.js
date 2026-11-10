@@ -1,4 +1,4 @@
-// Pilotage NewCo — PWA sans framework
+// Pilotage Meridia — PWA sans framework
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 // typographie française : espace insécable avant ? ! : ; % € »
@@ -103,7 +103,7 @@ function shell() {
   const mob = [['marche', 'list-numbers', 'Marche'], ['schema', 'graph', 'Montage'], ['decisions', 'question', 'Questions'], ['taches', 'kanban', 'Étapes'], ['plus', 'dots-three-outline', 'Plus']];
   $('#root').innerHTML = `<div class="app">
     <nav class="nav">
-      <div class="brand"><div class="name">${esc(D.proj.nom || 'Nouvelle société')}</div><div class="label sub">${esc(D.proj.phase || 'Pilotage du projet')}</div></div>
+      <div class="brand"><div class="name">${esc(D.proj.nom || 'Meridia')}</div><div class="label sub">${esc(D.proj.phase || 'Pilotage du projet')}</div></div>
       ${nav}
       <div class="foot">${av(D.me.id)}<div class="small" style="flex:1"><div style="color:var(--text);font-weight:500">${esc(D.me.name)}</div></div>
         <button class="btn icon ghost" data-act="theme" title="Thème"><i class="ph ph-circle-half"></i></button>
@@ -136,7 +136,7 @@ VIEWS.accueil = () => {
   <div class="hero">
     <div class="glow"></div><div class="glow b"></div>
     <div class="label">${esc(D.proj.surtitre || 'Création de société')}</div>
-    <h1 style="margin-top:12px">${esc(D.proj.nom || 'Nouvelle société')}</h1>
+    <h1 style="margin-top:12px">${esc(D.proj.nom || 'Meridia')}</h1>
     <p>${esc(D.proj.description || '')}</p>
     ${D.proj.avertissement ? `<div class="notice"><i class="ph ph-info"></i><span>${esc(D.proj.avertissement)}</span></div>` : ''}
     <div class="pillars">${pillars.map((p) => `<span><i class="ph ph-${esc(p[0])}"></i>${esc(p[1])}</span>`).join('')}</div>
@@ -504,7 +504,7 @@ function chantiersMap() {
     ${lines}
     <circle class="pulse" cx="${cx}" cy="${cy}" r="70" fill="var(--accent)" opacity=".35"/>
     <circle cx="${cx}" cy="${cy}" r="78" fill="#0A0A0A" stroke="var(--accent)" stroke-width="2"/>
-    <text x="${cx}" y="${cy - 4}" text-anchor="middle" style="font:700 19px var(--font-display);fill:#FAFAFA">${esc(D.proj.nom_court || D.proj.nom || 'NewCo')}</text>
+    <text x="${cx}" y="${cy - 4}" text-anchor="middle" style="font:700 19px var(--font-display);fill:#FAFAFA">${esc(D.proj.nom_court || D.proj.nom || 'Meridia')}</text>
     <text x="${cx}" y="${cy + 20}" text-anchor="middle" style="font:500 11px var(--font-mono);fill:var(--accent);letter-spacing:.1em">${done}/${all} traités</text>
     ${nodes.map((p) => p.svg).join('')}
   </svg></div>`;

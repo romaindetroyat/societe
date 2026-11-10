@@ -1,7 +1,7 @@
 {
-  "name": "Pilotage NewCo",
-  "short_name": "Pilotage",
-  "description": "Tableau de bord de création et de pilotage de la nouvelle société",
+  "name": "Meridia · Pilotage",
+  "short_name": "Meridia",
+  "description": "Tableau de bord de création et de pilotage de Meridia",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

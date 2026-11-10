@@ -187,7 +187,7 @@ async function rpc(m, env, user, origin) {
         protocolVersion: m.params?.protocolVersion || PROTOCOL,
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: 'pilotage-societe', version: '1.0.0' },
-        instructions: `Outil de pilotage de la création de la nouvelle société (ex-projet Take Off). Utilisateur connecté : ${user.name} (${user.id}). Commencer par « tableau_de_bord » pour le contexte, les identifiants des chantiers et de l'équipe. C'est un outil de présentation et de suivi partagé entre futurs associés et partenaires : rien n'est acté sans l'accord de tous. Formuler les éléments comme des questions ou des pistes, avec un ton ouvert, jamais comme des décisions prises à la place des autres. Les modifications sont journalisées au nom de l'utilisateur.`,
+        instructions: `Outil de pilotage de la création de Meridia (ex-projet Take Off). Utilisateur connecté : ${user.name} (${user.id}). Commencer par « tableau_de_bord » pour le contexte, les identifiants des chantiers et de l'équipe. C'est un outil de présentation et de suivi partagé entre futurs associés et partenaires : rien n'est acté sans l'accord de tous. Formuler les éléments comme des questions ou des pistes, avec un ton ouvert, jamais comme des décisions prises à la place des autres. Les modifications sont journalisées au nom de l'utilisateur.`,
       });
     case 'ping':
       return ok({});

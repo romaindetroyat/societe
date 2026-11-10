@@ -1,4 +1,4 @@
-# Pilotage NewCo
+# Pilotage Meridia
 
 Tableau de bord de création et de pilotage de société : chantiers, questions ouvertes, documents, feuille de route, étapes, contacts. PWA + serveur MCP pour Claude. Hébergé sur Cloudflare (Worker + D1 + R2), sans framework ni build.
 
